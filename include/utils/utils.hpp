@@ -1,0 +1,57 @@
+#ifndef UTIL_H
+#define UTIL_H
+
+#include <cstddef>
+#include <iostream>
+#include <iterator>
+#include <utility>
+#include <vector>
+
+
+#if NDEBUG
+    #define DEBUG(msg)  (void)0
+#else
+    #define DEBUG(msg) do { std::cerr << "[DEBUG] " << __FILE__ << ":" << __LINE__ << ": "  << msg << std::endl; } while(0)
+#endif
+
+
+namespace ggbp::utils {
+
+// -----------------------------------------------------------------------------
+//                            enumerate(Iterable)
+// -----------------------------------------------------------------------------
+
+template <typename Iterable>
+class EnumerateWrapper {
+    Iterable& iterable;
+
+public:
+    EnumerateWrapper(Iterable& it) : iterable(it) {}
+
+    struct iterator {
+        std::size_t index;
+        decltype(std::begin(iterable)) iter;
+
+        bool operator!=(const iterator& other) const { return iter != other.iter; }
+        void operator++() { ++index; ++iter; }
+        auto operator*() const { return std::pair{index, *iter}; }
+    };
+
+    auto begin() { return iterator{0, std::begin(iterable)}; }
+    auto end()   { return iterator{0, std::end(iterable)}; }
+};
+
+template <typename Iterable>
+auto enumerate(Iterable& iterable) {
+    return EnumerateWrapper(iterable);
+}
+
+
+
+
+
+}
+
+// check_burning_sequence
+
+#endif
