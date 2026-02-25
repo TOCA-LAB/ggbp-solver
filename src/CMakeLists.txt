@@ -1,7 +1,9 @@
 set(GGBP_SOURCES
     graph.cpp
     greedy.cpp
-    ilp.cpp
+    decoder.cpp
+    cover.cpp
+    naive.cpp
 )
 
 add_library(ggbp STATIC ${GGBP_SOURCES})

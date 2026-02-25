@@ -235,7 +235,7 @@ class LazyCovering: public GRBCallback {
     }
 };
 
-void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_sequence, bool verbose) {
+void solve_covering_ilp(Graph const &g, int const r, int const B, vector<int> &burning_sequence, bool verbose) {
     int num_vertices = g.order();
     vector<int> vertices = g.vertices();
 
@@ -463,7 +463,7 @@ int get_upper_bound(Graph const &g, int const r) {
     return 15;
 }
 
-void find_burning_sequence(Graph const &g, int const r, vector<int> &burning_sequence, bool verbose) {
+void ggbp_covering(Graph const &g, int const r, vector<int> &burning_sequence, bool verbose) {
     PRECONDITION(r >= 1);
     PRECONDITION(G.order() >= r);
 
@@ -482,7 +482,7 @@ void find_burning_sequence(Graph const &g, int const r, vector<int> &burning_seq
             cout << "Trying to find a burning sequence of length " << B << "." << endl;
         }
 
-        solve_ilp(g, r, B, temp_burning_sequence, verbose);
+        solve_covering_ilp(g, r, B, temp_burning_sequence, verbose);
 
         if(int(temp_burning_sequence.size()) == 0) {
             if (1) {

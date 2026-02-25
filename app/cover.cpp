@@ -61,8 +61,8 @@ int main(int argc, char *argv[]) {
 
     vector<int> burning_sequence;
     for (int i = 7; i <= g.order(); i++) {
-        ggbp::ilp::solve_ilp(g, r, i, burning_sequence, verbose);
-        // find_burning_sequence(g, r, burning_sequence, verbose);
+        ggbp::ilp::solve_covering_ilp(g, r, i, burning_sequence, verbose);
+        // ggbp_covering(g, r, burning_sequence, verbose);
 
         cout << i << " Burning Sequence: ";
         for (auto u : burning_sequence)
