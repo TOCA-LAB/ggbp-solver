@@ -1,6 +1,9 @@
 add_executable(cover cover.cpp)
 target_link_libraries(cover PRIVATE ggbp)
 
+add_executable(naive naive.cpp)
+target_link_libraries(naive PRIVATE ggbp)
+
 add_executable(greedy greedy.cpp )
 target_link_libraries(greedy PRIVATE ggbp)
 

@@ -63,3 +63,20 @@ int main (int argc, char *argv[]) {
         return 0;
 }
 #endif
+
+#if 0
+int onlyRead(std::string graph_file_path) {
+	Graph graph(graph_file_path);
+	int n_vertices = graph.getSize();
+
+	std::cout << n_vertices << " " << graph.getEdgesNo() << std::endl;
+	for (int i = 0; i < n_vertices; i++) {
+		std::cout << i << " (" << graph.getDegree(i) << "): ";
+		for (auto n : graph.getNeighbors(i))
+			std::cout << n << ", ";
+		std::cout << std::endl;
+	}
+
+	return 0;
+}
+#endif
