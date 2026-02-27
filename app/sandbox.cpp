@@ -65,18 +65,37 @@ int main (int argc, char *argv[]) {
 #endif
 
 #if 0
-int onlyRead(std::string graph_file_path) {
-	Graph graph(graph_file_path);
-	int n_vertices = graph.getSize();
+int main() {
+    vector<int> teste = g.vertices();
+    auto combs = ggbp::utils::Combinations(teste, r);
+    unsigned long long i = 0;
+    for (auto s : combs) {
+        cout << i << ": ";
+        for (auto u : s)
+            cout << u << " ";
+        cout << endl;
 
-	std::cout << n_vertices << " " << graph.getEdgesNo() << std::endl;
-	for (int i = 0; i < n_vertices; i++) {
-		std::cout << i << " (" << graph.getDegree(i) << "): ";
-		for (auto n : graph.getNeighbors(i))
-			std::cout << n << ", ";
-		std::cout << std::endl;
-	}
+        vector<int> tree = generate_covering_tree(g, r, s);
 
-	return 0;
+        for (int i = 0; i < g.order(); i++) {
+            cout << i << ": " << tree[i] << endl;
+        }
+        cout << endl;
+        i++;
+    }
+}
+#endif
+
+#if 0
+int main() {
+    vector<int> burning_sequence;
+    for (int i = 7; i <= g.order(); i++) {
+        ggbp::ilp::solve_covering_ilp(g, r, i, burning_sequence, verbose);
+
+        cout << i << " Burning Sequence: ";
+        for (auto u : burning_sequence)
+            cout << u + 1 << " ";
+        cout << endl;
+    }
 }
 #endif

@@ -41,39 +41,15 @@ int main(int argc, char *argv[]) {
     
     Graph g = Graph::from_mtx_file(graph_file_path);
 
-    // vector<int> teste = g.vertices();
-    // auto combs = ggbp::utils::Combinations(teste, r);
-    // unsigned long long i = 0;
-    // for (auto s : combs) {
-    //     cout << i << ": ";
-    //     for (auto u : s)
-    //         cout << u << " ";
-    //     cout << endl;
+    vector<Vertex> burning_sequence;
+    
+    ggbp::ilp::ggbp_covering(g, r, burning_sequence, verbose);
 
-    //     vector<int> tree = generate_covering_tree(g, r, s);
+    cout << "Burning Sequence: ";
+    for (auto u : burning_sequence)
+        cout << u + 1 << " ";
+    cout << endl;
 
-    //     for (int i = 0; i < g.order(); i++) {
-    //         cout << i << ": " << tree[i] << endl;
-    //     }
-    //     cout << endl;
-    //     i++;
-    // }
-
-    vector<int> burning_sequence;
-    for (int i = 7; i <= g.order(); i++) {
-        ggbp::ilp::solve_covering_ilp(g, r, i, burning_sequence, verbose);
-        // ggbp_covering(g, r, burning_sequence, verbose);
-
-        cout << i << " Burning Sequence: ";
-        for (auto u : burning_sequence)
-            cout << u + 1 << " ";
-        cout << endl;
-    }
-
-
-    // Vertex u;
-    // burning_sequence = {1, 3, 4};
-    // cout << is_burning_sequence(g, r, burning_sequence, u) << endl;
-
+    
     return 0;
 }
