@@ -4,6 +4,7 @@ set(GGBP_SOURCES
     decoder.cpp
     cover.cpp
     naive.cpp
+    ggbp_utils.cpp
 )
 
 add_library(ggbp STATIC ${GGBP_SOURCES})

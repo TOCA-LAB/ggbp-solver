@@ -7,13 +7,14 @@
 #include "ggbp/ggbp.hpp"
 
 using std::vector;
+using std::cout, std::endl;
 
 int main(int argc, char* argv[]) {
 	using std::chrono::high_resolution_clock;
 	using std::chrono::duration;
 	using std::chrono::seconds;
 
-	argparse::ArgumentParser program("RunBRKGA");
+	argparse::ArgumentParser program("Naive");
 
 	std::string graph_file_path;
 	program.add_argument("file_path")
@@ -34,12 +35,17 @@ int main(int argc, char* argv[]) {
 		.default_value("normal")
 		.required();
 
+    program.add_argument("-o", "--out-file")
+        .help("Choose the output file");
+
+    program.add_argument("-t", "--timeout")
+        .help("Define the timeout for the LP solver");
 		
 	try {
 		program.parse_args(argc, argv);
 	}
 	catch (const std::exception& err) {
-		std::cerr << err.what() << std::endl;
+		std::cerr << err.what() << endl;
 		std::cerr << program;
 		std::exit(1);
 	}
@@ -57,52 +63,57 @@ int main(int argc, char* argv[]) {
 
 	int grb_verbose = 0;
 	if (program["--verbose"] == true) {
-		std::cout << graph_name << ": " << graph.order() << " " << graph.size() << std::endl;
+		cout << graph_name << ": " << graph.order() << " " << graph.size() << endl;
 		grb_verbose = 1;
 	}
 	vector<int> burning_sequence;
 	ggbp::ilp::GurobiErrorInfo err_info;
 	err_info.msg = "";
 	
-	solve_ilp(graph, r, burning_sequence, err_info, grb_verbose);
+	ggbp::ilp::naive::solve_ilp(graph, r, burning_sequence, err_info, grb_verbose);
 
 	auto t2 = high_resolution_clock::now();
 	duration<double, std::milli> ms_double = t2 - t1;
 
-	std::cout << graph_name << "; "
-			  << graph.order() << "; "<< graph.size() << "; ";
+	cout << graph_name << "; "
+		 << graph.order() << "; "<< graph.size() << "; ";
 
 	if (err_info.msg == "") {
-		std::cout << burning_sequence.size() << "; " << burning_sequence.size() << "; " 
-				  << burning_sequence.size() << "; ";
+		cout << burning_sequence.size() << "; " << burning_sequence.size() << "; " 
+		     << burning_sequence.size() << "; ";
 
         for (auto u : burning_sequence)
-            std::cout << u << ", ";
-        std::cout << std::endl;
+            cout << u << ", ";
+        cout << endl;
+
 	} else {
-		std::cout << err_info.ObjBound << "; " << err_info.ObjVal << "; --; ";
+		cout << err_info.ObjBound << "; " << err_info.ObjVal << "; --; ";
 	}
 
-	std::cout << ms_double.count()/1000 << " " + err_info.msg << std::endl;
+	cout << ms_double.count()/1000 << " " + err_info.msg << endl;
 
-	std::ofstream benchmark_csv("./benchmarks/runs/benchmark-r" + std::to_string(r) + ".csv", std::ofstream::app);
-	if (!benchmark_csv)
-		std::cout << "Erro" << std::endl;
-	benchmark_csv << graph_name << "; "
-			      << graph.order() << "; "<< graph.size() << "; ";
+    if (program.present("-o")) {
+        std::ofstream out_file(program.get("-o"));
+        
+        if (!out_file)
+		    cout << "Arquivo de saída não existe" << endl;
+        
+        out_file << graph_name << "; "
+                 << graph.order() << "; "<< graph.size() << "; ";
 
-	if (err_info.msg == "") {
-		benchmark_csv << burning_sequence.size() << "; " << burning_sequence.size() << "; " 
-					  << burning_sequence.size() << "; ";
-	} else {
-		benchmark_csv << err_info.ObjBound << "; " << err_info.ObjVal << "; --; ";
-	}
+        if (err_info.msg == "") {
+            out_file << burning_sequence.size() << "; " << burning_sequence.size() << "; " 
+                     << burning_sequence.size() << "; ";
+        } else {
+            out_file << err_info.ObjBound << "; " << err_info.ObjVal << "; --; ";
+        }
 
-	benchmark_csv << ms_double.count()/1000 << " " + err_info.msg << std::endl ;
+        out_file << ms_double.count()/1000 << " " + err_info.msg << endl ;
+    }
 
 	// for (auto i = burning_sequence.begin(); i < burning_sequence.end(); ++i)
 	// 	benchmark_csv << *i+1 << ","; // adding 1 to match the original vertex index 
-	// benchmark_csv << "]" << std::endl;
+	// benchmark_csv << "]" << endl;
 
 	return 0;
 }

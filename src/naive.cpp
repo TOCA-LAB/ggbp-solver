@@ -6,7 +6,7 @@
 #include "ggbp/ggbp.hpp"
 #include "ggbp/decoder.hpp"
 
-namespace ggbp::ilp {
+namespace ggbp::ilp::naive {
 using namespace std;
 
 int get_upper_bound(Graph &graph, int const r, int verbose) {
@@ -79,7 +79,7 @@ void solve_ilp(Graph &graph, int const r, vector<int> &burning_sequence, GurobiE
             GRBLinExpr expr = 0;
             for (int j = 0; j < n_vertices; j++)
                 expr += vars_s[j][i];
-            model.addConstr(expr == vars_z[i], "MIT_" + to_string(i));
+            model.addConstr(expr == vars_z[i], "MIT_" + to_string(i)).set(GRB_IntAttr_Lazy, 2);
         }
 
         // A vertex can only be ignitor once
@@ -87,7 +87,7 @@ void solve_ilp(Graph &graph, int const r, vector<int> &burning_sequence, GurobiE
             GRBLinExpr expr = 0;
             for (int j = 0; j < K; j++)
                 expr += vars_s[i][j];
-            model.addConstr(expr <= 1, "I_" + to_string(i));
+            model.addConstr(expr <= 1, "I_" + to_string(i)).set(GRB_IntAttr_Lazy, 2);
         }
 
         // An ignitor also burns

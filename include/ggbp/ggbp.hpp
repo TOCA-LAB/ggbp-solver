@@ -23,15 +23,18 @@ namespace ggbp::ilp {
     } typedef GurobiErrorInfo;
 
 
-    bool is_burning_sequence(Graph const &g, int r, std::vector<int> &burning_sequence, Vertex &unburned);
+    namespace naive {
+        void solve_ilp(Graph &graph, int const r, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, int verbose);
+    }
     
-    std::vector<int> generate_covering_tree(Graph const &g, int const r, std::vector<int> sources);
+    namespace cover {
+        std::vector<int> generate_covering_tree(Graph const &g, int const r, std::vector<int> sources);
 
-    void solve_covering_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, bool verbose);
+        void solve_covering_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, bool verbose);
 
-    void ggbp_covering(Graph const &g, int const r, std::vector<int> &burning_sequence, bool verbose);
-
-    void solve_ilp(Graph &graph, int const r, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, int verbose);
+        void ggbp_covering(Graph const &g, int const r, std::vector<int> &burning_sequence, bool verbose);    
+    }
+    
 }
 
 #endif

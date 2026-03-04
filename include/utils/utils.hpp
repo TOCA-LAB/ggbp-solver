@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include "ggbp/graph.hpp"
+
 
 #if NDEBUG
     #define DEBUG(msg)  (void)0
@@ -46,12 +48,7 @@ auto enumerate(Iterable& iterable) {
     return EnumerateWrapper(iterable);
 }
 
-
-
-
-
+    bool is_burning_sequence(Graph const &g, int r, std::vector<int> &burning_sequence, Vertex &unburned);
 }
-
-// check_burning_sequence
 
 #endif
