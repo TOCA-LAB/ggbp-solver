@@ -11,7 +11,7 @@ using namespace std;
 class Decoder {
 public:
 
-	Decoder(Graph &g, int const _r);
+	Decoder(Graph const &g, int const _r);
 
 	~Decoder();
 

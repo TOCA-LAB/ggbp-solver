@@ -1,15 +1,17 @@
 #include <cmath>
 #include "gurobi_c++.h"
+#include "utils/contract.hpp"
 #include "brkga-lib/MTRand.h"
 #include "brkga-lib/BRKGA.h"
 #include "ggbp/graph.hpp"
-#include "ggbp/ggbp.hpp"
 #include "ggbp/decoder.hpp"
+
+#include "ggbp/ggbp.hpp"
 
 namespace ggbp::ilp::naive {
 using namespace std;
 
-int get_upper_bound(Graph &graph, int const r, int verbose) {
+int get_upper_bound(Graph const &graph, int const r, int verbose) {
     const unsigned n = graph.order();
     const unsigned p = 60;
     const unsigned MAX_GENS = 25;
@@ -43,9 +45,10 @@ int get_upper_bound(Graph &graph, int const r, int verbose) {
     return algorithm.getBestFitness();
 }
 
-void solve_ilp(Graph &graph, int const r, vector<int> &burning_sequence, GurobiErrorInfo &err_info, int verbose) {
+void solve_ilp(Graph const &graph, int const r, vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose) {
     int const n_vertices = graph.order();
-    int const K = get_upper_bound(graph, r, verbose);
+    int const B = get_upper_bound(graph, r, false);
+    
 
     try {        
         GRBEnv env(true);
@@ -58,24 +61,24 @@ void solve_ilp(Graph &graph, int const r, vector<int> &burning_sequence, GurobiE
         model.set(GRB_DoubleParam_MemLimit, 13.5);
 
         // Defining the variables
-        vector<vector<GRBVar>> vars_s(n_vertices, vector<GRBVar>(K));
-        vector<vector<GRBVar>> vars_q(n_vertices, vector<GRBVar>(K));
-        vector<GRBVar> vars_z(K);
+        vector<vector<GRBVar>> vars_s(n_vertices, vector<GRBVar>(B));
+        vector<vector<GRBVar>> vars_q(n_vertices, vector<GRBVar>(B));
+        vector<GRBVar> vars_z(B);
 
         for (int i = 0; i < n_vertices; i++) {
-            for (int j = 0; j < K; j++) {
+            for (int j = 0; j < B; j++) {
                 vars_s[i][j] = model.addVar(0, 1, 0, GRB_BINARY, "s_" + to_string(i) + "_" + to_string(j));
                 vars_q[i][j] = model.addVar(0, 1, 0, GRB_BINARY, "q_" + to_string(i) + "_" + to_string(j));
             }
         }
 
-        for (int i = 0; i < K; i++)
+        for (int i = 0; i < B; i++)
             vars_z[i] = model.addVar(0, 1, 0, GRB_BINARY, "z_" + to_string(i)); 
         
         // Adding the constraints
 
         // One ignitor vertex for each used turn
-        for (int i = 0; i < K; i++) {
+        for (int i = 0; i < B; i++) {
             GRBLinExpr expr = 0;
             for (int j = 0; j < n_vertices; j++)
                 expr += vars_s[j][i];
@@ -85,19 +88,19 @@ void solve_ilp(Graph &graph, int const r, vector<int> &burning_sequence, GurobiE
         // A vertex can only be ignitor once
         for (int i = 0; i < n_vertices; i++) {
             GRBLinExpr expr = 0;
-            for (int j = 0; j < K; j++)
+            for (int j = 0; j < B; j++)
                 expr += vars_s[i][j];
             model.addConstr(expr <= 1, "I_" + to_string(i)).set(GRB_IntAttr_Lazy, 2);
         }
 
         // An ignitor also burns
         for (int i = 0; i < n_vertices; i++)
-            for (int j = 0; j < K; j++)
+            for (int j = 0; j < B; j++)
                 model.addConstr(vars_s[i][j] <= vars_q[i][j], "QI_" + to_string(i) + "_" + to_string(j));
 
         // A vertex burns only if there are r burning neighbours or if it is a source 
         for (int i = 0; i < n_vertices; i++)
-            for (int j = 0; j < K-1; j++) {
+            for (int j = 0; j < B-1; j++) {
                 GRBLinExpr expr = 0, e_expr, ne_expr;
                 for (auto neighbor : graph.neighbors(i))
                     expr += vars_q[neighbor][j];
@@ -113,7 +116,7 @@ void solve_ilp(Graph &graph, int const r, vector<int> &burning_sequence, GurobiE
             if (graph.degree(u) < r) {
                 GRBLinExpr expr = 0;
                 // cout << "Vertex: " << u << ", d(u) = " << graph.degree(u) << endl; 
-                for (int i = 0; i < K; i++)
+                for (int i = 0; i < B; i++)
                     expr += vars_s[u][i];
                 model.addConstr(expr == 1, "S_" + to_string(u));
             }
@@ -121,7 +124,7 @@ void solve_ilp(Graph &graph, int const r, vector<int> &burning_sequence, GurobiE
         
         // A burned vertex continues burning throughout the entire process
         for (int i = 0; i < n_vertices; i++)
-            for (int j = 0; j < K-1; j++)
+            for (int j = 0; j < B-1; j++)
                 model.addConstr(vars_q[i][j] <= vars_q[i][j+1], "Q_" + to_string(i) + "_" + to_string(j));
 
         // On the first turn, all vertices are not burned, except the first source
@@ -133,25 +136,25 @@ void solve_ilp(Graph &graph, int const r, vector<int> &burning_sequence, GurobiE
 
         // If there's a vertex not burning, a new turn is needed
         for (int i = 0; i < n_vertices; i++)
-            for (int j = 0; j < K-1; j++)
+            for (int j = 0; j < B-1; j++)
                 model.addConstr((1 - vars_q[i][j]) <= vars_z[j+1], "NT_" + to_string(i) + "_" + to_string(j));
 
         // All vertices must be burned at the end
         GRBLinExpr expr = 0;
         for (int i = 0; i < n_vertices; i++)
-            expr += vars_q[i][K-1];
+            expr += vars_q[i][B-1];
         model.addConstr(expr == n_vertices, "T_K");
 
         // Minimize the number of turns
         GRBLinExpr obj = 0;
-        for (int i = 0; i < K; i++)
+        for (int i = 0; i < B; i++)
             obj += vars_z[i];
         model.setObjective(obj, GRB_MINIMIZE);
 
         for (int i = 0; i < n_vertices; i++)
-            for (int j = 0; j < K-1; j++) {
-                // vars_s[i][j].set(GRB_IntAttr_BranchPriority, K-j);
-                // vars_z[j].set(GRB_IntAttr_BranchPriority, K-j);
+            for (int j = 0; j < B-1; j++) {
+                // vars_s[i][j].set(GRB_IntAttr_BranchPriority, B-j);
+                // vars_z[j].set(GRB_IntAttr_BranchPriority, B-j);
             } 
 
         model.optimize();
@@ -159,7 +162,7 @@ void solve_ilp(Graph &graph, int const r, vector<int> &burning_sequence, GurobiE
         int opt_status = model.get(GRB_IntAttr_Status);
 
         if (opt_status == GRB_OPTIMAL) {
-			for(int i = 0; i < K; i++) {
+			for(int i = 0; i < B; i++) {
             	for(int j = 0; j < n_vertices; j++) {
 					if(vars_s[j][i].get(GRB_DoubleAttr_X) > 0.5)
 						burning_sequence.push_back(j);
@@ -167,18 +170,18 @@ void solve_ilp(Graph &graph, int const r, vector<int> &burning_sequence, GurobiE
             }
             // printVector(burning_sequence, "Burning sequence");
         } else if (opt_status == GRB_TIME_LIMIT) {
-            if (model.get(GRB_DoubleAttr_ObjVal) < K)
+            if (model.get(GRB_DoubleAttr_ObjVal) < B)
                 err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
             else
-                err_info.ObjVal = K;
+                err_info.ObjVal = B;
             
             err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
             err_info.msg = "//TIME LIMIT";
         } else if (opt_status == GRB_MEM_LIMIT) {
-            if (model.get(GRB_DoubleAttr_ObjVal) < K)
+            if (model.get(GRB_DoubleAttr_ObjVal) < B)
                 err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
             else
-                err_info.ObjVal = K;
+                err_info.ObjVal = B;
 
             err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
             err_info.msg = "//OUT OF MEMORY (soft)";
@@ -188,7 +191,7 @@ void solve_ilp(Graph &graph, int const r, vector<int> &burning_sequence, GurobiE
 		cout << e.getMessage() << endl;
 
         if (e.getErrorCode() == GRB_ERROR_OUT_OF_MEMORY) {
-            err_info.ObjVal = K;
+            err_info.ObjVal = B;
             err_info.ObjBound = 0;
             err_info.msg = "//OUT OF MEMORY";
         }
@@ -196,4 +199,58 @@ void solve_ilp(Graph &graph, int const r, vector<int> &burning_sequence, GurobiE
 		cout << "Exception during optimization" << endl;
 	}
 }
+
+void solve_decision_ilp(Graph const &graph, int const r, int const B, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose) {
+    // TODO
+    return;
+}
+
+void find_burning_sequence(Graph const &g, int const r, std::vector<int> &burning_sequence, bool verbose) {
+    PRECONDITION(r >= 1);
+    PRECONDITION(G.order() >= r);
+
+    int LB = 0;
+    int UB = get_upper_bound(g, r, false);
+    vector<int> temp_burning_sequence;
+
+	ggbp::ilp::GurobiErrorInfo err_info;
+
+    int iteration = 0;
+    while(LB <= UB) {
+        int B = (UB + LB)/2;
+
+        if (1) {
+            cout << "Iteration #" << iteration << endl;
+            cout << "Current lower bound = " << LB << endl;
+            cout << "Current upper bound = " << UB << endl;
+            cout << "Trying to find a burning sequence of length " << B << "." << endl;
+        }
+
+    	err_info.msg = "";
+
+        solve_decision_ilp(g, r, B, temp_burning_sequence, err_info, verbose);
+
+        if(int(temp_burning_sequence.size()) == 0) {
+            if (1) {
+                cout << "There is no burning sequence of length " << B << "." << endl << endl;
+            }
+            LB = B+1;
+        } else {
+            if (1) {
+                cout << "A burning sequence of length " << B << " was found." << endl << endl;
+            }
+            UB = B;
+            swap(burning_sequence, temp_burning_sequence);
+
+            if (UB == LB)
+                break;
+        }
+
+        iteration++;
+    }
+
+    cout << "Optimal burning sequence has length " << int(burning_sequence.size()) << "." << endl << endl;
+}
+
+
 }

@@ -7,7 +7,7 @@
 
 using namespace std;
 
-Decoder::Decoder(Graph &g, int const _r) : graph(g) { 
+Decoder::Decoder(Graph const &g, int const _r) : graph(g) { 
     r = _r;
     n_vertices = g.order();
 }

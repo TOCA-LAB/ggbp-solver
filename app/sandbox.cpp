@@ -90,7 +90,7 @@ int main() {
 int main() {
     vector<int> burning_sequence;
     for (int i = 7; i <= g.order(); i++) {
-        ggbp::ilp::solve_covering_ilp(g, r, i, burning_sequence, verbose);
+        ggbp::ilp::solve_ilp(g, r, i, burning_sequence, verbose);
 
         cout << i << " Burning Sequence: ";
         for (auto u : burning_sequence)

@@ -16,23 +16,27 @@ std::vector<Vertex> greedy(const Graph &graph, const int r);
 
 namespace ggbp::ilp {
 
-    struct {
+    struct GurobiErrorInfo {
         double ObjVal;
         double ObjBound;
         std::string msg;
-    } typedef GurobiErrorInfo;
+    };
 
 
     namespace naive {
-        void solve_ilp(Graph &graph, int const r, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, int verbose);
+        void solve_ilp(Graph const &graph, int const r, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose);
+
+        void solve_decision_ilp(Graph const &graph, int const r, int const B, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose);
+
+        void find_burning_sequence(Graph const &g, int const r, std::vector<int> &burning_sequence, bool verbose);    
     }
     
     namespace cover {
         std::vector<int> generate_covering_tree(Graph const &g, int const r, std::vector<int> sources);
 
-        void solve_covering_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, bool verbose);
+        void solve_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, bool verbose);
 
-        void ggbp_covering(Graph const &g, int const r, std::vector<int> &burning_sequence, bool verbose);    
+        void find_burning_sequence(Graph const &g, int const r, std::vector<int> &burning_sequence, bool verbose);    
     }
     
 }

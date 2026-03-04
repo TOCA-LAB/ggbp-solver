@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 
     vector<Vertex> burning_sequence;
     
-    ggbp::ilp::cover::ggbp_covering(g, r, burning_sequence, verbose);
+    ggbp::ilp::cover::find_burning_sequence(g, r, burning_sequence, verbose);
 
     cout << "Burning Sequence: ";
     for (auto u : burning_sequence)

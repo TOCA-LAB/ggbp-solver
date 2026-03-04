@@ -25,21 +25,21 @@ int main(int argc, char* argv[]) {
 		.help("Define the r constant for the GGBP")
 		.required()
 		.store_into(r);
-
+        
+    int verbose = 0;
 	program.add_argument("-V", "--verbose")
 		.help("Increase output verbosity")
   		.flag();
 
-	program.add_argument("-d", "--debug")
-		.help("Choose to run only some functions")
-		.default_value("normal")
-		.required();
-
     program.add_argument("-o", "--out-file")
         .help("Choose the output file");
 
+    int timeout;
     program.add_argument("-t", "--timeout")
-        .help("Define the timeout for the LP solver");
+        .help("Define the timeout for the LP solver")
+        .default_value("7200")
+        .required()
+        .store_into(timeout);
 		
 	try {
 		program.parse_args(argc, argv);
@@ -61,16 +61,15 @@ int main(int argc, char* argv[]) {
 	}
 	std::string graph_name(ptr+1, end_ptr);
 
-	int grb_verbose = 0;
 	if (program["--verbose"] == true) {
 		cout << graph_name << ": " << graph.order() << " " << graph.size() << endl;
-		grb_verbose = 1;
+		verbose = 1;
 	}
 	vector<int> burning_sequence;
 	ggbp::ilp::GurobiErrorInfo err_info;
 	err_info.msg = "";
 	
-	ggbp::ilp::naive::solve_ilp(graph, r, burning_sequence, err_info, grb_verbose);
+	ggbp::ilp::naive::solve_ilp(graph, r, burning_sequence, err_info, verbose);
 
 	auto t2 = high_resolution_clock::now();
 	duration<double, std::milli> ms_double = t2 - t1;
@@ -96,7 +95,7 @@ int main(int argc, char* argv[]) {
         std::ofstream out_file(program.get("-o"));
         
         if (!out_file)
-		    cout << "Arquivo de saída não existe" << endl;
+		    cout << "Arquivo de saída inválido" << endl;
         
         out_file << graph_name << "; "
                  << graph.order() << "; "<< graph.size() << "; ";
