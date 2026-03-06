@@ -37,10 +37,9 @@ int main(int argc, char* argv[]) {
     int timeout;
     program.add_argument("-t", "--timeout")
         .help("Define the timeout for the LP solver")
-        .default_value("7200")
-        .required()
+        .default_value(7200)
         .store_into(timeout);
-		
+	
 	try {
 		program.parse_args(argc, argv);
 	}

@@ -24,9 +24,9 @@ namespace ggbp::ilp {
 
 
     namespace naive {
-        void solve_ilp(Graph const &graph, int const r, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose);
+        void solve_ilp(Graph const &g, int const r, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose);
 
-        void solve_decision_ilp(Graph const &graph, int const r, int const B, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose);
+        void solve_decision_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose);
 
         void find_burning_sequence(Graph const &g, int const r, std::vector<int> &burning_sequence, bool verbose);    
     }

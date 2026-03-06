@@ -5,14 +5,15 @@
 #include "brkga-lib/BRKGA.h"
 #include "ggbp/graph.hpp"
 #include "ggbp/decoder.hpp"
+#include "utils/utils.hpp"
 
 #include "ggbp/ggbp.hpp"
 
 namespace ggbp::ilp::naive {
 using namespace std;
 
-int get_upper_bound(Graph const &graph, int const r, int verbose) {
-    const unsigned n = graph.order();
+int get_upper_bound(Graph const &g, int const r, int verbose) {
+    const unsigned n = g.order();
     const unsigned p = 60;
     const unsigned MAX_GENS = 25;
     const double pe = 0.20;
@@ -21,7 +22,7 @@ int get_upper_bound(Graph const &graph, int const r, int verbose) {
     const unsigned K = 2;
     const unsigned MAXT = 2;
 
-    Decoder decoder(graph, r);
+    Decoder decoder(g, r);
 
     const long unsigned rngSeed = 0;
     MTRand rng(rngSeed);
@@ -45,10 +46,21 @@ int get_upper_bound(Graph const &graph, int const r, int verbose) {
     return algorithm.getBestFitness();
 }
 
-void solve_ilp(Graph const &graph, int const r, vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose) {
-    int const n_vertices = graph.order();
-    int const B = get_upper_bound(graph, r, false);
+void solve_ilp(Graph const &g, int const r, vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose) {
+    int const n_vertices = g.order();
+    int const B = get_upper_bound(g, r, false) + 1;
+    cout << B << endl;
     
+    bool linear_relax = false;
+
+    char vtype = GRB_BINARY;
+
+    if (linear_relax) {
+        vtype = GRB_CONTINUOUS;
+    }
+
+    bool opt = false;
+
 
     try {        
         GRBEnv env(true);
@@ -60,115 +72,113 @@ void solve_ilp(Graph const &graph, int const r, vector<int> &burning_sequence, G
         model.set(GRB_DoubleParam_SoftMemLimit, 13.0);
         model.set(GRB_DoubleParam_MemLimit, 13.5);
 
-        // Defining the variables
-        vector<vector<GRBVar>> vars_s(n_vertices, vector<GRBVar>(B));
-        vector<vector<GRBVar>> vars_q(n_vertices, vector<GRBVar>(B));
-        vector<GRBVar> vars_z(B);
+        // --- Variáveis ---
+        // x[v, t]: 1 se o vértice v está queimado no tempo t
+        vector<vector<GRBVar>> x(n_vertices, vector<GRBVar>(B));
 
-        for (int i = 0; i < n_vertices; i++) {
-            for (int j = 0; j < B; j++) {
-                vars_s[i][j] = model.addVar(0, 1, 0, GRB_BINARY, "s_" + to_string(i) + "_" + to_string(j));
-                vars_q[i][j] = model.addVar(0, 1, 0, GRB_BINARY, "q_" + to_string(i) + "_" + to_string(j));
-            }
-        }
-
-        for (int i = 0; i < B; i++)
-            vars_z[i] = model.addVar(0, 1, 0, GRB_BINARY, "z_" + to_string(i)); 
+        // y[v, t]: 1 se o vértice v é inflamado manualmente no tempo t
+        vector<vector<GRBVar>> y(n_vertices, vector<GRBVar>(B));
         
-        // Adding the constraints
-
-        // One ignitor vertex for each used turn
-        for (int i = 0; i < B; i++) {
-            GRBLinExpr expr = 0;
-            for (int j = 0; j < n_vertices; j++)
-                expr += vars_s[j][i];
-            model.addConstr(expr == vars_z[i], "MIT_" + to_string(i)).set(GRB_IntAttr_Lazy, 2);
-        }
-
-        // A vertex can only be ignitor once
-        for (int i = 0; i < n_vertices; i++) {
-            GRBLinExpr expr = 0;
-            for (int j = 0; j < B; j++)
-                expr += vars_s[i][j];
-            model.addConstr(expr <= 1, "I_" + to_string(i)).set(GRB_IntAttr_Lazy, 2);
-        }
-
-        // An ignitor also burns
-        for (int i = 0; i < n_vertices; i++)
-            for (int j = 0; j < B; j++)
-                model.addConstr(vars_s[i][j] <= vars_q[i][j], "QI_" + to_string(i) + "_" + to_string(j));
-
-        // A vertex burns only if there are r burning neighbours or if it is a source 
-        for (int i = 0; i < n_vertices; i++)
-            for (int j = 0; j < B-1; j++) {
-                GRBLinExpr expr = 0, e_expr, ne_expr;
-                for (auto neighbor : graph.neighbors(i))
-                    expr += vars_q[neighbor][j];
-                e_expr = (expr + 1 - r) * 1.0/graph.degree(i);
-                ne_expr = expr * 1.0/r;
-                model.addConstr(e_expr <= vars_q[i][j+1], 
-                "ESP_"  + to_string(i) + "_" + to_string(j));
-                model.addConstr(vars_q[i][j+1] <= (ne_expr + vars_s[i][j+1] + vars_q[i][j]), 
-                "NESP_"  + to_string(i) + "_" + to_string(j));  
-            }
+        // w[v, t]: 1 se o vértice v é inflamado espontaneamente no tempo t
+        vector<vector<GRBVar>> w(n_vertices, vector<GRBVar>(B));
 
         for (int u = 0; u < n_vertices; u++) {
-            if (graph.degree(u) < r) {
-                GRBLinExpr expr = 0;
-                // cout << "Vertex: " << u << ", d(u) = " << graph.degree(u) << endl; 
-                for (int i = 0; i < B; i++)
-                    expr += vars_s[u][i];
-                model.addConstr(expr == 1, "S_" + to_string(u));
+            x[u][0] = model.addVar(0, 1, 0, vtype, "x_" + to_string(u) + "_0");
+
+            for (int t = 1; t < B; t++) {
+                x[u][t] = model.addVar(0, 1, 0, vtype, "x_" + to_string(u) + "_" + to_string(t));
+                y[u][t] = model.addVar(0, 1, 0, vtype, "y_" + to_string(u) + "_" + to_string(t));
+                w[u][t] = model.addVar(0, 1, 0, vtype, "w_" + to_string(u) + "_" + to_string(t));
             }
         }
-        
-        // A burned vertex continues burning throughout the entire process
-        for (int i = 0; i < n_vertices; i++)
-            for (int j = 0; j < B-1; j++)
-                model.addConstr(vars_q[i][j] <= vars_q[i][j+1], "Q_" + to_string(i) + "_" + to_string(j));
 
-        // On the first turn, all vertices are not burned, except the first source
-        for (int i = 0; i < n_vertices; i++)
-            model.addConstr(vars_q[i][0] == vars_s[i][0], "T0_" + to_string(i));
+        // --- Restrições ---
+        // 0. Estado inicial: ninguém queimado
+        for (int u = 0; u < n_vertices; u++) {
+            model.addConstr(x[u][0] == 0, "init");
+        }
 
-        // The first turn always happens
-        model.addConstr(vars_z[0] == 1);
-
-        // If there's a vertex not burning, a new turn is needed
-        for (int i = 0; i < n_vertices; i++)
-            for (int j = 0; j < B-1; j++)
-                model.addConstr((1 - vars_q[i][j]) <= vars_z[j+1], "NT_" + to_string(i) + "_" + to_string(j));
-
-        // All vertices must be burned at the end
         GRBLinExpr expr = 0;
-        for (int i = 0; i < n_vertices; i++)
-            expr += vars_q[i][B-1];
-        model.addConstr(expr == n_vertices, "T_K");
+        for (int t = 1; t < B; t++) {
+            // 1. Exatamente uma ignição manual por passo
+            if (!opt) {
+                for (int u = 0; u < n_vertices; u++)
+                    expr += y[u][t];
+                model.addConstr(expr == 1, "ignitor_" + to_string(t));
+            }
 
-        // Minimize the number of turns
-        GRBLinExpr obj = 0;
-        for (int i = 0; i < B; i++)
-            obj += vars_z[i];
-        model.setObjective(obj, GRB_MINIMIZE);
+            for (int u = 0; u < n_vertices; u++) {
+                // 2. Persistência: uma vez queimado, sempre queimado
+                model.addConstr(x[u][t] >= x[u][t-1], "stay_" + to_string(u) + "_" + to_string(t));
+            
+                //  3. Lógica de Difusão (Threshold r)
+                if (g.degree(u) >= r) {
+                    // w[v,t] só pode ser 1 se r vizinhos estavam queimados em t-1
+                    expr = 0;
+                    for (int v : g.neighbors(u))
+                        expr += x[v][t-1];
+                    model.addConstr(r * w[u][t] <= expr, "diff_" + to_string(u) + "_" + to_string(t));
+                } else {
+                    model.addConstr(w[u][t] == 0);
+                }
 
-        for (int i = 0; i < n_vertices; i++)
-            for (int j = 0; j < B-1; j++) {
-                // vars_s[i][j].set(GRB_IntAttr_BranchPriority, B-j);
-                // vars_z[j].set(GRB_IntAttr_BranchPriority, B-j);
-            } 
+                // 4. Transição: x[v,t] é 1 se já estava queimado, foi ignitado ou difundido
+                model.addConstr(x[u][t] <= x[u][t-1] + y[u][t] + w[u][t], "trans_" + to_string(u) + "_" + to_string(t));
+            }
+        }
+
+        // 5. Condição de Finalização: TODOS os vértices devem estar queimados no tempo B
+        for (int u = 0; u < n_vertices; u++) {
+            model.addConstr(x[u][B-1] == 1, "burned_" + to_string(u));
+        }
+
+        // Se escolher versão de otimização
+        if (opt) {
+            // Variável de otimização
+            // done[t]: 1 se todos os vértices estão queimados no turno t
+            vector<GRBVar> done(B);
+
+            for (int t = 0; t < B; t++) {
+                done[t] = model.addVar(0, 1, 0, vtype, "done_" + to_string(t));
+            }
+
+            for (int t = 1; t < B; t++) {
+                expr = 0;
+                for (int u = 0; u < n_vertices; u++) {
+                    expr += y[u][t];
+                }
+                model.addConstr(expr == 1 - done[t-1], "ignition_limit_done_" + to_string(t));
+
+                model.addConstr(done[t] >= done[t-1], "done_persistence" + to_string(t));
+
+                for (int u = 0; u < n_vertices; u++) {
+                    model.addConstr(done[t] <= x[u][t], "check_done_" + to_string(u) + "_" + to_string(t));
+                }
+            }
+            // Minimiza a quantidade de turnos até todos vértices serem queimados
+            GRBLinExpr obj = 0;
+            for (int t = 1; t < B; t++) {
+                obj += 1 - done[t];
+            }
+            model.setObjective(obj + 1, GRB_MINIMIZE);
+        }
+
 
         model.optimize();
 
         int opt_status = model.get(GRB_IntAttr_Status);
 
+        burning_sequence.clear();
         if (opt_status == GRB_OPTIMAL) {
-			for(int i = 0; i < B; i++) {
-            	for(int j = 0; j < n_vertices; j++) {
-					if(vars_s[j][i].get(GRB_DoubleAttr_X) > 0.5)
-						burning_sequence.push_back(j);
+			for(int t = 1; t < B; t++) {
+            	for(int u = 0; u < n_vertices; u++) {
+                    if (y[u][t].get(GRB_DoubleAttr_X) > 0.5) {
+                        burning_sequence.push_back(u);
+                    }
                 }
             }
-            // printVector(burning_sequence, "Burning sequence");
+            Vertex u;
+            cout << ggbp::utils::is_burning_sequence(g, r, burning_sequence, u) << endl;
         } else if (opt_status == GRB_TIME_LIMIT) {
             if (model.get(GRB_DoubleAttr_ObjVal) < B)
                 err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
@@ -200,7 +210,7 @@ void solve_ilp(Graph const &graph, int const r, vector<int> &burning_sequence, G
 	}
 }
 
-void solve_decision_ilp(Graph const &graph, int const r, int const B, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose) {
+void solve_decision_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose) {
     // TODO
     return;
 }
