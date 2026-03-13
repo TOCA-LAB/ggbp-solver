@@ -98,12 +98,15 @@ void solve_ilp(Graph const &g, int const r, vector<int> &burning_sequence, Gurob
             model.addConstr(x[u][0] == 0, "init");
         }
 
-        GRBLinExpr expr = 0;
+        GRBLinExpr expr;
         for (int t = 1; t < B; t++) {
             // 1. Exatamente uma ignição manual por passo
             if (!opt) {
-                for (int u = 0; u < n_vertices; u++)
+                cout << t << endl;
+                expr = 0;
+                for (int u = 0; u < n_vertices; u++) {
                     expr += y[u][t];
+                }
                 model.addConstr(expr == 1, "ignitor_" + to_string(t));
             }
 
@@ -131,6 +134,13 @@ void solve_ilp(Graph const &g, int const r, vector<int> &burning_sequence, Gurob
         for (int u = 0; u < n_vertices; u++) {
             model.addConstr(x[u][B-1] == 1, "burned_" + to_string(u));
         }
+
+
+        vector<Vertex> sequence = {2, 33, 5, 6, 11};
+
+        // for (int t = 1; t < B; t++) {
+        //     model.addConstr(y[sequence[t-1]][t] == 1);
+        // }
 
         // Se escolher versão de otimização
         if (opt) {
@@ -177,6 +187,7 @@ void solve_ilp(Graph const &g, int const r, vector<int> &burning_sequence, Gurob
                     }
                 }
             }
+
             Vertex u;
             cout << ggbp::utils::is_burning_sequence(g, r, burning_sequence, u) << endl;
         } else if (opt_status == GRB_TIME_LIMIT) {
