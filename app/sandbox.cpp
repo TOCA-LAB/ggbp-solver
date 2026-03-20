@@ -16,7 +16,7 @@ using namespace std;
 int main() {
     vector<double> v = {0.10, 0.30, 0.02, 0.70, 0.90, 0.12, 0.26};
 
-    ggbp::utils::bucket_sort(v, 3);
+    // ggbp::utils::bucket_sort(v, 3, std::less());
     
     cout << v << endl;
 
