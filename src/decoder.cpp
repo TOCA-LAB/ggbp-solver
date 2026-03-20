@@ -46,11 +46,11 @@ tuple<int, vector<int>> Decoder::decoder(const vector< double >& chromosome) con
 
     function<bool (pair<int, double>, pair<int, double>)> cmp = [](pair<int, double> left, pair<int, double> right) { return (left.second < right.second); };
     function<double (pair<int, double>)> val = [](pair<int, double> p) {return p.second;};
-    priority_queue<pair<int, double>, vector<pair<int, double>>, decltype(cmp)> vertex_queue(indexed_chromossome.begin(), indexed_chromossome.end(), cmp);
+    // priority_queue<pair<int, double>, vector<pair<int, double>>, decltype(cmp)> vertex_queue(indexed_chromossome.begin(), indexed_chromossome.end(), cmp);
 
     ggbp::utils::bucket_sort<pair<int, double>>(indexed_chromossome, 10, cmp, val);
 
-    pair<int, double> next_to_burn = vertex_queue.top();
+    auto next_to_burn = indexed_chromossome.begin();
 
     int n_burning = 0;
     while (n_burning < num_vertices) {
@@ -75,21 +75,19 @@ tuple<int, vector<int>> Decoder::decoder(const vector< double >& chromosome) con
         }
 
         if (n_burning == num_vertices) {
-            vertex_queue.pop();
-            next_to_burn = vertex_queue.top();
-            burning_sequence.push_back(next_to_burn.first);
+            next_to_burn++;
+            burning_sequence.push_back(next_to_burn->first);
         } else {
-            while (vertex_queue.size() > 0 && burned[next_to_burn.first]) {
-                vertex_queue.pop();
-                next_to_burn = vertex_queue.top();
+            while (next_to_burn != indexed_chromossome.end() && burned[next_to_burn->first]) {
+                next_to_burn++;
             }
-            if (vertex_queue.size() > 0) {
-                burned[next_to_burn.first] = 1;
-                future_to_burn.push_back(next_to_burn.first);
-                burning_sequence.push_back(next_to_burn.first);
+            if (next_to_burn != indexed_chromossome.end()) {
+                burned[next_to_burn->first] = 1;
+                future_to_burn.push_back(next_to_burn->first);
+                burning_sequence.push_back(next_to_burn->first);
                 n_burning++;
 
-                for (auto u : graph.neighbors(next_to_burn.first))
+                for (auto u : graph.neighbors(next_to_burn->first))
                     num_burning_neighbors[u]++;
             }
         }
