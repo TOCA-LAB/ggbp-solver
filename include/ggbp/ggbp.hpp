@@ -2,10 +2,35 @@
 #define HEURISTICS_H
 
 #include <vector>
+#include <tuple>
 #include <string>
 
 #include "ggbp/graph.hpp"
 
+
+namespace ggbp::brkga {
+    class Decoder {
+    public:
+
+        Decoder(Graph const &g, int const _r);
+
+        ~Decoder();
+
+        int countBurningNeighbours(const int &v, const std::vector<int> &burned) const;
+
+        std::tuple<int, std::vector<int>> decoder(const std::vector< double >& chromosome) const;
+
+        double decode(const std::vector< double >& chromosome) const;
+
+        std::vector<int> getBurningSequence(const std::vector< double >& chromosome) const;
+
+    private:
+
+        int r;
+        Graph graph;
+        int n_vertices;
+    };
+}
 
 namespace ggbp::heuristics {
 

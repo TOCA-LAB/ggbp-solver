@@ -4,7 +4,7 @@
 #include "brkga-lib/MTRand.h"
 #include "brkga-lib/BRKGA.h"
 #include "ggbp/graph.hpp"
-#include "ggbp/decoder.hpp"
+#include "ggbp/ggbp.hpp"
 #include "utils/utils.hpp"
 
 #include "ggbp/ggbp.hpp"
@@ -22,12 +22,12 @@ int get_upper_bound(Graph const &g, int const r, int verbose) {
     const unsigned K = 2;
     const unsigned MAXT = 2;
 
-    Decoder decoder(g, r);
+    ggbp::brkga::Decoder decoder(g, r);
 
     const long unsigned rngSeed = 0;
     MTRand rng(rngSeed);
 
-	BRKGA< Decoder, MTRand > algorithm(n, p, pe, pm, rhoe, decoder, rng, K, MAXT);
+	BRKGA< ggbp::brkga::Decoder, MTRand > algorithm(n, p, pe, pm, rhoe, decoder, rng, K, MAXT);
 	unsigned generation = 0;
 	const unsigned X_INTVL = 10;
 	const unsigned X_NUMBER = 2;

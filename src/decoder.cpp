@@ -2,10 +2,13 @@
 #include <forward_list>
 #include <queue>
 #include <algorithm>
-#include "ggbp/decoder.hpp"
+#include <cmath>
+#include "ggbp/ggbp.hpp"
 #include "ggbp/graph.hpp"
 
+namespace ggbp::brkga {
 using namespace std;
+
 
 Decoder::Decoder(Graph const &g, int const _r) : graph(g) { 
     r = _r;
@@ -88,4 +91,5 @@ double Decoder::decode(const std::vector< double >& chromosome) const {
 
 vector<int> Decoder::getBurningSequence(const std::vector< double >& chromosome) const {
     return get<1>(decoder (chromosome));
+}
 }

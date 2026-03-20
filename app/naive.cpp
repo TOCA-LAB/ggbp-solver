@@ -100,8 +100,7 @@ int main(int argc, char* argv[]) {
                  << graph.order() << "; "<< graph.size() << "; ";
 
         if (err_info.msg == "") {
-            out_file << burning_sequence.size() << "; " << burning_sequence.size() << "; " 
-                     << burning_sequence.size() << "; ";
+            out_file << burning_sequence.size() << "; ";
         } else {
             out_file << err_info.ObjBound << "; " << err_info.ObjVal << "; --; ";
         }

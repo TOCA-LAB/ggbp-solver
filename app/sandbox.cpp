@@ -9,9 +9,21 @@
 #include "utils/contract.hpp"
 
 #include "utils/combinations.hpp"
+#include "utils/utils.hpp"
 
 using namespace std;
 
+int main() {
+    vector<double> v = {0.10, 0.30, 0.02, 0.70, 0.90, 0.12, 0.26};
+
+    ggbp::utils::bucket_sort(v, 3);
+    
+    cout << v << endl;
+
+    return 0;
+}
+
+#if 0
 int main() {
 
     vector<int> vec;
@@ -30,6 +42,7 @@ int main() {
 
     return 0;
 }
+#endif
 
 #if 0
 int main() {

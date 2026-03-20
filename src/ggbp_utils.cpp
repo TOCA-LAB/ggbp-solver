@@ -1,5 +1,7 @@
 #include <vector>
 #include <forward_list>
+#include <algorithm>
+#include <cmath>
 
 #include "ggbp/graph.hpp"
 
@@ -62,6 +64,28 @@ bool is_burning_sequence(Graph const &g, int r, vector<Vertex> &burning_sequence
     }
 
     return true;
+}
+
+void bucket_sort(vector<double> &v, int n) {
+    vector<vector<double>> B(n);
+
+    for (int i = 0; i < n; i++) {
+        B[i].reserve((double(n) / v.size()));
+    }
+
+    for (double e : v) {
+        B[floor(e * n)].push_back(e);
+    }
+
+    unsigned count = 0;
+    for (int i = 0; i < n; i++) {
+        sort(B[i].begin(), B[i].end());
+
+        for (auto e : B[i]) {
+            v[count] = e;
+            count++;
+        }
+    }
 }
 
 }

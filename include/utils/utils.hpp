@@ -48,7 +48,10 @@ auto enumerate(Iterable& iterable) {
     return EnumerateWrapper(iterable);
 }
 
-    bool is_burning_sequence(Graph const &g, int r, std::vector<int> &burning_sequence, Vertex &unburned);
+bool is_burning_sequence(Graph const &g, int r, std::vector<int> &burning_sequence, Vertex &unburned);
+
+void bucket_sort(std::vector<double> &v, int n);
+
 }
 
 #endif
