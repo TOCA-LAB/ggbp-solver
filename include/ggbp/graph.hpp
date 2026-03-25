@@ -27,6 +27,7 @@ public:
     static Graph from_file(const std::string& fpath);
     static Graph from_mtx_file(const std::string& path);
 
+    Graph() = default;
     Graph(const Graph&) = default;
     Graph(Graph&&) noexcept = default;
     Graph& operator=(const Graph&) = default;

@@ -16,6 +16,10 @@ int main(int argc, char* argv[]) {
 
 	argparse::ArgumentParser program("Naive");
 
+    std::string format;
+    program.add_argument("format")
+        .store_into(format);
+
 	std::string graph_file_path;
 	program.add_argument("file_path")
 		.store_into(graph_file_path);
@@ -51,7 +55,17 @@ int main(int argc, char* argv[]) {
 	
 	auto t1 = high_resolution_clock::now();
 
-	Graph graph = Graph::from_mtx_file(graph_file_path);
+	Graph graph;
+    
+    if (format == "mtx") {
+        graph = Graph::from_mtx_file(graph_file_path);
+    } else if (format == "g6") {
+        std::ifstream g6_file(graph_file_path);
+        std::string g6_string {std::istreambuf_iterator<char>(g6_file), std::istreambuf_iterator<char>() };
+        graph = Graph(g6_string);
+    } else {
+        cout << "Invalid graph format" << endl;
+    }
 
 	std::string::iterator ptr, end_ptr;
 	for (ptr = graph_file_path.end(); *ptr != '/'; --ptr) {
