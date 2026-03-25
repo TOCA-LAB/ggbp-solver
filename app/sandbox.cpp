@@ -9,9 +9,21 @@
 #include "utils/contract.hpp"
 
 #include "utils/combinations.hpp"
+#include "utils/utils.hpp"
 
 using namespace std;
 
+int main() {
+    vector<double> v = {0.10, 0.30, 0.02, 0.70, 0.90, 0.12, 0.26};
+
+    // ggbp::utils::bucket_sort(v, 3, std::less());
+    
+    cout << v << endl;
+
+    return 0;
+}
+
+#if 0
 int main() {
 
     vector<int> vec;
@@ -30,6 +42,7 @@ int main() {
 
     return 0;
 }
+#endif
 
 #if 0
 int main() {
@@ -90,7 +103,7 @@ int main() {
 int main() {
     vector<int> burning_sequence;
     for (int i = 7; i <= g.order(); i++) {
-        ggbp::ilp::solve_covering_ilp(g, r, i, burning_sequence, verbose);
+        ggbp::ilp::solve_ilp(g, r, i, burning_sequence, verbose);
 
         cout << i << " Burning Sequence: ";
         for (auto u : burning_sequence)

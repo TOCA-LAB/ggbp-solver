@@ -7,10 +7,11 @@
 #include "ggbp/graph.hpp"
 #include "utils/combinations.hpp"
 #include "utils/contract.hpp"
+#include "utils/utils.hpp"
 
 #include "ggbp/ggbp.hpp"
 
-namespace ggbp::ilp {
+namespace ggbp::ilp::cover {
 using namespace std;
 
 vector<int> generate_covering_tree(Graph const &g, int const r, vector<Vertex> sources) {
@@ -40,62 +41,6 @@ vector<int> generate_covering_tree(Graph const &g, int const r, vector<Vertex> s
     }
 
     return depth;
-}
-
-
-bool is_burning_sequence(Graph const &g, int r, vector<Vertex> &burning_sequence, Vertex &unburned) {
-    int num_vertices = g.order();
-
-    vector<bool> in_sequence(num_vertices, false);
-    vector<bool> burned(num_vertices, false);
-    vector<int> num_burned_neighbors(num_vertices, 0);
-
-
-    forward_list<int> to_burn;
-    vector<bool> in_to_burn(num_vertices, false);
-    forward_list<int> next_to_burn;
-
-    for (auto u : burning_sequence) {
-        if (!burned[u]) {
-            burned[u] = true;
-
-            for (auto w : g.neighbors(u)) {
-                num_burned_neighbors[w]++;
-
-                if (!in_to_burn[w] && !burned[w] && num_burned_neighbors[w] >= r) {
-                    next_to_burn.push_front(w);
-                    in_to_burn[w] = true;
-                }
-            }
-        }
-
-        for (auto v : to_burn) {
-            if (!burned[v]) {
-                burned[v] = true;
-                for (auto w : g.neighbors(v)) {
-                    num_burned_neighbors[w]++;
-
-                    if (!in_to_burn[w] && !burned[w] && num_burned_neighbors[w] >= r) {
-                        next_to_burn.push_front(w);
-                        in_to_burn[w] = true;
-                    }
-                }
-            }
-        }
-        
-        to_burn = next_to_burn;
-        next_to_burn.clear();
-        in_to_burn.assign(num_vertices, false);
-    }
-
-    for (int u = 0; u < num_vertices; u++) {
-        if (!burned[u]) {
-            unburned = u;
-            return false;
-        }
-    }
-
-    return true;
 }
 
 
@@ -140,7 +85,7 @@ class LazyCovering: public GRBCallback {
                 cout << endl;
 
                 Vertex unburned;
-                if (!is_burning_sequence(g, r, burning_sequence, unburned)) {
+                if (!ggbp::utils::is_burning_sequence(g, r, burning_sequence, unburned)) {
                     cout << "Lazy vertex: " << unburned << endl;
 
                     queue<Vertex> q;
@@ -235,7 +180,7 @@ class LazyCovering: public GRBCallback {
     }
 };
 
-void solve_covering_ilp(Graph const &g, int const r, int const B, vector<int> &burning_sequence, bool verbose) {
+void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_sequence, bool verbose) {
     int num_vertices = g.order();
     vector<int> vertices = g.vertices();
 
@@ -417,7 +362,7 @@ void solve_covering_ilp(Graph const &g, int const r, int const B, vector<int> &b
 
             if (!burning_sequence.empty()) {
                 Vertex unburned;
-                if (!is_burning_sequence(g, r, burning_sequence, unburned))
+                if (!ggbp::utils::is_burning_sequence(g, r, burning_sequence, unburned))
                     cout << "Solution is not burning sequence" << endl;
             }
 
@@ -463,7 +408,7 @@ int get_upper_bound(Graph const &g, int const r) {
     return 15;
 }
 
-void ggbp_covering(Graph const &g, int const r, vector<int> &burning_sequence, bool verbose) {
+void find_burning_sequence(Graph const &g, int const r, vector<int> &burning_sequence, bool verbose) {
     PRECONDITION(r >= 1);
     PRECONDITION(G.order() >= r);
 
@@ -482,7 +427,7 @@ void ggbp_covering(Graph const &g, int const r, vector<int> &burning_sequence, b
             cout << "Trying to find a burning sequence of length " << B << "." << endl;
         }
 
-        solve_covering_ilp(g, r, B, temp_burning_sequence, verbose);
+        solve_ilp(g, r, B, temp_burning_sequence, verbose);
 
         if(int(temp_burning_sequence.size()) == 0) {
             if (1) {

@@ -6,6 +6,9 @@
 #include <iterator>
 #include <utility>
 #include <vector>
+#include <functional>
+
+#include "ggbp/graph.hpp"
 
 
 #if NDEBUG
@@ -46,12 +49,31 @@ auto enumerate(Iterable& iterable) {
     return EnumerateWrapper(iterable);
 }
 
+bool is_burning_sequence(Graph const &g, int r, std::vector<int> &burning_sequence, Vertex &unburned);
 
+template <class T>
+void bucket_sort(std::vector<T> &v, int n, std::function<bool (T, T)> cmp, std::function<double (T)> val) {
+    std::vector<std::vector<T>> B(n);
 
+    for (int i = 0; i < n; i++) {
+        B[i].reserve((double(n) / v.size()));
+    }
 
+    for (auto e : v) {
+        B[floor(val(e) * n)].push_back(e);
+    }
 
+    unsigned count = 0;
+    for (int i = 0; i < n; i++) {
+        sort(B[i].begin(), B[i].end(), cmp);
+
+        for (auto e : B[i]) {
+            v[count] = e;
+            count++;
+        }
+    }
 }
 
-// check_burning_sequence
+}
 
 #endif

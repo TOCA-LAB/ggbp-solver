@@ -2,10 +2,35 @@
 #define HEURISTICS_H
 
 #include <vector>
+#include <tuple>
 #include <string>
 
 #include "ggbp/graph.hpp"
 
+
+namespace ggbp::brkga {
+    class Decoder {
+    public:
+
+        Decoder(Graph const &g, int const _r);
+
+        ~Decoder();
+
+        int countBurningNeighbours(const int &v, const std::vector<int> &burned) const;
+
+        std::tuple<int, std::vector<int>> decoder(const std::vector< double >& chromosome) const;
+
+        double decode(const std::vector< double >& chromosome) const;
+
+        std::vector<int> getBurningSequence(const std::vector< double >& chromosome) const;
+
+    private:
+
+        int r;
+        Graph graph;
+        int n_vertices;
+    };
+}
 
 namespace ggbp::heuristics {
 
@@ -16,22 +41,29 @@ std::vector<Vertex> greedy(const Graph &graph, const int r);
 
 namespace ggbp::ilp {
 
-    struct {
+    struct GurobiErrorInfo {
         double ObjVal;
         double ObjBound;
         std::string msg;
-    } typedef GurobiErrorInfo;
+    };
 
 
-    bool is_burning_sequence(Graph const &g, int r, std::vector<int> &burning_sequence, Vertex &unburned);
+    namespace naive {
+        void solve_ilp(Graph const &g, int const r, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose);
+
+        void solve_decision_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose);
+
+        void find_burning_sequence(Graph const &g, int const r, std::vector<int> &burning_sequence, bool verbose);    
+    }
     
-    std::vector<int> generate_covering_tree(Graph const &g, int const r, std::vector<int> sources);
+    namespace cover {
+        std::vector<int> generate_covering_tree(Graph const &g, int const r, std::vector<int> sources);
 
-    void solve_covering_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, bool verbose);
+        void solve_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, bool verbose);
 
-    void ggbp_covering(Graph const &g, int const r, std::vector<int> &burning_sequence, bool verbose);
-
-    void solve_ilp(Graph &graph, int const r, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, int verbose);
+        void find_burning_sequence(Graph const &g, int const r, std::vector<int> &burning_sequence, bool verbose);    
+    }
+    
 }
 
 #endif
