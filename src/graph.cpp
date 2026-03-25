@@ -2,6 +2,8 @@
 #include <iostream>
 #include <fstream>
 #include <numeric>
+#include <queue>
+#include <vector>
 
 #include "ggbp/graph.hpp"
 
@@ -137,6 +139,7 @@ Graph::Graph(const std::string& graph6_str) {
     nedges_ = 0;
 
     adj_.resize(order);
+    distance_matrix.resize(order);
     auto adj_bs = string6_to_bitset(adj_str);
 
     int idx = adj_bs.size() - 1;
@@ -151,3 +154,38 @@ Graph::Graph(const std::string& graph6_str) {
 
 }
 
+void Graph::calculate_distances(int origin) {
+    size_type n_vertices = order();
+    distance_matrix[origin].resize(n_vertices);
+    for (int i = 0; i < n_vertices; i++)
+        distance_matrix[origin][i] = n_vertices;
+
+    std::queue<int> bfs_queue;
+    std::vector<int> visited(n_vertices, 0);
+    bfs_queue.push(origin);
+    visited[origin] = 1;
+    int u, curr_size, distance = 0;
+    
+    while (!bfs_queue.empty()) {
+        curr_size = bfs_queue.size();
+        while (curr_size > 0) {
+            u = bfs_queue.front();
+            bfs_queue.pop();
+            
+            distance_matrix[origin][u] = distance;
+
+            for (int v : neighbors(u)) {
+                if (!visited[v]) {
+                    visited[v] = 1;
+                    bfs_queue.push(v);
+                }
+            }
+            curr_size--;
+        }
+        distance++;
+    }
+}
+
+int Graph::get_distance(int v1, int v2) {
+    return distance_matrix[v1][v2];
+}

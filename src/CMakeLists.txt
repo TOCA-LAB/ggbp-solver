@@ -4,6 +4,7 @@ set(GGBP_SOURCES
     decoder.cpp
     cover.cpp
     naive.cpp
+    prym.cpp
     ggbp_utils.cpp
 )
 

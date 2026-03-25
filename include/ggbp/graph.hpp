@@ -19,7 +19,8 @@ public:
     explicit Graph(size_type nvertices) 
         : nvertices_(nvertices),
           nedges_(0),
-          adj_(nvertices)
+          adj_(nvertices),
+          distance_matrix(nvertices)
     {}
 
     Graph(const std::string& graph6_str);
@@ -63,10 +64,16 @@ public:
 
     bool remove_edge(Vertex u, Vertex v);
 
+    void calculate_distances(int origin);
+
+    int get_distance(int v1, int v2);
+
     void clear() noexcept {
         for (auto& s : adj_) s.clear();
         nedges_ = 0;
     }
+    
+    std::vector<std::vector<int>> distance_matrix;
 
 
     friend std::ostream& operator<<(std::ostream& os, const Graph& g);

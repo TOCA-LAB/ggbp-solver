@@ -64,6 +64,13 @@ namespace ggbp::ilp {
         void find_burning_sequence(Graph const &g, int const r, std::vector<int> &burning_sequence, bool verbose);    
     }
     
+    namespace prym {
+        void run_bff_d(Graph &graph, std::vector<int> &burning_sequence);
+
+        void solve_prym(Graph &graph, int B, std::vector<int> &temp_burning_sequence, std::vector<int> initial_covered_vertices);
+
+        void run_prym(Graph &graph, std::vector<int> &burning_sequence);
+    }
 }
 
 #endif
