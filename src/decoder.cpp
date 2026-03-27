@@ -48,7 +48,8 @@ tuple<int, vector<int>> Decoder::decoder(const vector< double >& chromosome) con
     function<double (pair<int, double>)> val = [](pair<int, double> p) {return p.second;};
     // priority_queue<pair<int, double>, vector<pair<int, double>>, decltype(cmp)> vertex_queue(indexed_chromossome.begin(), indexed_chromossome.end(), cmp);
 
-    ggbp::utils::bucket_sort<pair<int, double>>(indexed_chromossome, 10, cmp, val);
+    ggbp::utils::bucket_sort<pair<int, double>>(indexed_chromossome, num_vertices / 3000, cmp, val);
+    // sort(indexed_chromossome.begin(), indexed_chromossome.end(), cmp);
 
     auto next_to_burn = indexed_chromossome.begin();
 

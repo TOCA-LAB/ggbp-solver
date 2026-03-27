@@ -47,9 +47,7 @@ void run_bff_d(Graph &graph, vector<int> &burning_sequence) {
         }
 
         burning_sequence.push_back(selected);
-    cout << "oi1" << endl;
         graph.calculate_distances(selected);
-    cout << "oi2" << endl;
         
         if (!queued[selected]) {
             burning_queue.push(selected);

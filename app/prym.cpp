@@ -32,6 +32,7 @@ int main(int argc, char* argv[]) {
         .help("Choose to run only some functions")
         .default_value("normal")
         .required();
+        
     program.add_argument("-o", "--out-file")
         .help("Choose the output file");
 
