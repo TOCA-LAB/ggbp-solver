@@ -46,6 +46,24 @@ int get_upper_bound(Graph const &g, int const r, int verbose) {
     return algorithm.getBestFitness();
 }
 
+void add_active_neighborhood_logic(GRBModel &model, Graph const &g, vector<vector<GRBVar>> x, vector<vector<GRBVar>> w, int const r, int const B) {
+    auto num_vertices = g.order();
+    for (int u = 0; u < num_vertices; u++) {
+        if (g.degree(u) < r)
+            break;
+
+        for (int t = 2; t < B; t++) {
+            GRBLinExpr expr = 0;
+
+            for (auto v : g.neighbors(u)) {
+                expr += x[v][t-1] - x[v][t-2];
+            }
+
+            model.addConstr(w[u][t] <= expr, "Ngbr_" + to_string(u) + "_" + to_string(t));
+        }
+    }
+}
+
 void solve_ilp(Graph const &g, int const r, vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose) {
     int const n_vertices = g.order();
     int const B = get_upper_bound(g, r, false) + 1;
@@ -59,7 +77,7 @@ void solve_ilp(Graph const &g, int const r, vector<int> &burning_sequence, Gurob
         vtype = GRB_CONTINUOUS;
     }
 
-    bool opt = false;
+    bool opt = true;
 
 
     try {        
@@ -135,8 +153,10 @@ void solve_ilp(Graph const &g, int const r, vector<int> &burning_sequence, Gurob
             model.addConstr(x[u][B-1] == 1, "burned_" + to_string(u));
         }
 
+        add_active_neighborhood_logic(model, g, x, w, r, B);
 
-        vector<Vertex> sequence = {2, 33, 5, 6, 11};
+
+        // vector<Vertex> sequence = {2, 33, 5, 6, 11};
 
         // for (int t = 1; t < B; t++) {
         //     model.addConstr(y[sequence[t-1]][t] == 1);
