@@ -19,13 +19,6 @@ Decoder::Decoder(Graph const &g, int const _r) : graph(g) {
 
 Decoder::~Decoder() { }
 
-int Decoder::countBurningNeighbours(const int &v, const vector<int> &burned) const {
-    int count = 0;
-    for (const int& neighbour : graph.neighbors(v))
-        if (burned[neighbour]) count++;
-    return count;
-}
-
 vector<pair<int, double>> indexedChromossome(const vector<double>& v)
 {
     vector<pair<int, double>> indexed_chromossome(v.size());
@@ -48,7 +41,7 @@ tuple<int, vector<int>> Decoder::decoder(const vector< double >& chromosome) con
     function<double (pair<int, double>)> val = [](pair<int, double> p) {return p.second;};
     // priority_queue<pair<int, double>, vector<pair<int, double>>, decltype(cmp)> vertex_queue(indexed_chromossome.begin(), indexed_chromossome.end(), cmp);
 
-    ggbp::utils::bucket_sort<pair<int, double>>(indexed_chromossome, num_vertices / 3000, cmp, val);
+    ggbp::utils::bucket_sort<pair<int, double>>(indexed_chromossome, num_vertices / 300 + 1, cmp, val);
     // sort(indexed_chromossome.begin(), indexed_chromossome.end(), cmp);
 
     auto next_to_burn = indexed_chromossome.begin();

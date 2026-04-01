@@ -16,8 +16,6 @@ namespace ggbp::brkga {
 
         ~Decoder();
 
-        int countBurningNeighbours(const int &v, const std::vector<int> &burned) const;
-
         std::tuple<int, std::vector<int>> decoder(const std::vector< double >& chromosome) const;
 
         double decode(const std::vector< double >& chromosome) const;
