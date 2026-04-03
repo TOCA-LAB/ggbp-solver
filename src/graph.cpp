@@ -187,5 +187,12 @@ void Graph::calculate_distances(int origin) {
 }
 
 int Graph::get_distance(int v1, int v2) {
-    return distance_matrix[v1][v2];
+    if (distance_matrix[v1].size() != 0)
+        return distance_matrix[v1][v2];
+    
+    if (distance_matrix[v2].size() != 0)
+        return distance_matrix[v2][v1];
+    
+    calculate_distances(v1);
+    return distance_matrix[v1][v2];        
 }

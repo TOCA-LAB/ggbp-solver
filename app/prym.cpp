@@ -14,7 +14,7 @@ int main(int argc, char* argv[]) {
     using std::chrono::duration;
     using std::chrono::seconds;
 
-    argparse::ArgumentParser program("PRYM");
+    argparse::ArgumentParser program("GBP-PRYM");
 
     std::string format;
     program.add_argument("format")

@@ -76,7 +76,7 @@ public:
     std::vector<std::vector<int>> distance_matrix;
 
 
-    friend std::ostream& operator<<(std::ostream& os, const Graph& g);
+    friend std::ostream& operator<<(std::ostream& os, const Graph& G);
 
 private:
     size_type nvertices_;

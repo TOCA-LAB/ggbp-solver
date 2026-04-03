@@ -46,8 +46,27 @@ int get_upper_bound(Graph const &g, int const r, int verbose) {
     return algorithm.getBestFitness();
 }
 
+void add_radius_cut(GRBModel &model, Graph &g, vector<vector<GRBVar>> x, vector<vector<GRBVar>> y, int const r, int const B) {
+    auto num_vertices = g.order();
+
+    for (int u = 0; u < num_vertices; u++) {
+        for (int t = 1; t < B; t++) {
+            GRBLinExpr expr = 0;
+            for (int v = 0; v < num_vertices; v++) {
+                for (int ti = 1; ti <= t; ti++) {
+                    if (g.get_distance(u, v) <= (t - ti))
+                        expr += y[v][ti];
+                }
+            }
+            model.addConstr(x[u][t] <= expr, "Radius_" + to_string(u) + "_" + to_string(t));
+        }
+    }
+}
+
+
 void add_active_neighborhood_logic(GRBModel &model, Graph const &g, vector<vector<GRBVar>> x, vector<vector<GRBVar>> w, int const r, int const B) {
     auto num_vertices = g.order();
+
     for (int u = 0; u < num_vertices; u++) {
         if (g.degree(u) < r)
             break;
@@ -64,7 +83,7 @@ void add_active_neighborhood_logic(GRBModel &model, Graph const &g, vector<vecto
     }
 }
 
-void solve_ilp(Graph const &g, int const r, vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose) {
+void solve_ilp(Graph &g, int const r, vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose) {
     int const n_vertices = g.order();
     int const B = get_upper_bound(g, r, false) + 1;
     cout << B << endl;
@@ -155,6 +174,7 @@ void solve_ilp(Graph const &g, int const r, vector<int> &burning_sequence, Gurob
 
         add_active_neighborhood_logic(model, g, x, w, r, B);
 
+        add_radius_cut(model, g, x, y, r, B);
 
         // vector<Vertex> sequence = {2, 33, 5, 6, 11};
 
