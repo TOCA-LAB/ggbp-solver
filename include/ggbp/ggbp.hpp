@@ -39,6 +39,15 @@ std::vector<Vertex> greedy(const Graph &graph, const int r);
 
 namespace ggbp::ilp {
 
+    struct GurobiParams {
+        double mem_limit;
+        double soft_mem_limit;
+        double time_limit;
+        bool verbose;
+
+        GurobiParams() = default;
+    };
+
     struct GurobiErrorInfo {
         double ObjVal;
         double ObjBound;
@@ -47,11 +56,20 @@ namespace ggbp::ilp {
 
 
     namespace naive {
-        void solve_ilp(Graph &g, int const r, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose);
+        struct LPParams : ggbp::ilp::GurobiParams {
+            bool linear_relax;
+            bool opt;
+            bool radius_cut;
+            bool active_neighborhood;
 
-        void solve_decision_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, bool verbose);
+            LPParams() = default;
+        };
 
-        void find_burning_sequence(Graph const &g, int const r, std::vector<int> &burning_sequence, bool verbose);    
+        int get_upper_bound(Graph const &g, int const r, int verbose);
+        
+        void solve_ilp(Graph &g, int const r, int const B, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, LPParams params);
+
+        void find_burning_sequence(Graph &g, int const r, std::vector<int> &burning_sequence, LPParams params);    
     }
     
     namespace cover {
