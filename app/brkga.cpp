@@ -2,9 +2,8 @@
 #include <chrono>
 #include <string>
 #include <fstream>
-#include <random>
-#include "ggbp/ggbp.hpp"
 #include "argparse/argparse.hpp"
+#include "ggbp/ggbp.hpp"
 #include "ggbp/graph.hpp"
 #include "brkga-lib/MTRand.h"
 #include "brkga-lib/BRKGA.h"

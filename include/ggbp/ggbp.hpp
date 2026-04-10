@@ -30,6 +30,10 @@ namespace ggbp::brkga {
     };
 }
 
+namespace ggbp::grasp {
+    void grasp(Graph const &graph, int r, int max_it, std::vector<int>& burning_sequence, bool verbose);
+}
+
 namespace ggbp::heuristics {
 
 std::vector<Vertex> greedy(const Graph &graph, const int r);
@@ -38,7 +42,6 @@ std::vector<Vertex> greedy(const Graph &graph, const int r);
 }
 
 namespace ggbp::ilp {
-
     struct GurobiParams {
         double mem_limit;
         double soft_mem_limit;

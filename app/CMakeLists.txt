@@ -17,5 +17,8 @@ if(OpenMP_CXX_FOUND)
     target_link_libraries(brkga PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
+add_executable(grasp grasp.cpp )
+target_link_libraries(grasp PRIVATE ggbp)
+
 add_executable(sandbox sandbox.cpp)
 target_link_libraries(sandbox PRIVATE ggbp)

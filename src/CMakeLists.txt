@@ -2,6 +2,7 @@ set(GGBP_SOURCES
     graph.cpp
     greedy.cpp
     decoder.cpp
+    grasp.cpp
     cover.cpp
     naive.cpp
     prym.cpp
