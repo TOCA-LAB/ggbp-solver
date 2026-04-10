@@ -13,5 +13,9 @@ target_link_libraries(greedy PRIVATE ggbp)
 add_executable(brkga brkga.cpp )
 target_link_libraries(brkga PRIVATE ggbp)
 
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(brkga PUBLIC OpenMP::OpenMP_CXX)
+endif()
+
 add_executable(sandbox sandbox.cpp)
 target_link_libraries(sandbox PRIVATE ggbp)

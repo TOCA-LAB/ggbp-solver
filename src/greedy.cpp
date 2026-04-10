@@ -59,13 +59,13 @@ value_starting_ignitors(const Graph& G, int r, const vector<Vertex>& ignitors) {
     PRECONDITION(all_in_interval(ignitors, 0, G.order() - 1));
     
     Vertex u = ignitors[0];
-    unordered_set<Vertex> common_neighbors = G.neighbors(u);
+    vector<Vertex> common_neighbors = G.neighbors(u);
 
     for (size_t i = 1; i < ignitors.size(); i++) {
       u = ignitors[i];
-      const unordered_set<Vertex>& nei = G.neighbors(u);
+      const vector<Vertex>& nei = G.neighbors(u);
       for (auto it = common_neighbors.begin(); it != common_neighbors.end(); ) 
-        if (nei.contains(*it))
+        if (std::find(nei.begin(), nei.end(), *it) != nei.end())
           it = common_neighbors.erase(it);
         else
           ++it;

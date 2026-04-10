@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <unordered_set>
+#include <algorithm>
 #include <cstddef>
 #include <stdexcept>
 #include <ostream>
@@ -13,7 +14,7 @@ using Vertex = int;
 class Graph {
 public:
     //using Vertex = int;
-    using AdjList = std::vector<std::unordered_set<Vertex>>;
+    using AdjList = std::vector<std::vector<Vertex>>;
     using size_type = size_t; 
 
     explicit Graph(size_type nvertices) 
@@ -47,7 +48,7 @@ public:
         check_vertex(u);
         check_vertex(v);
 
-        return adj_[u].find(v) != adj_[u].end();
+        return std::find(adj_[u].begin(), adj_[u].end(), v) != adj_[u].end();
     }
 
     size_type degree(Vertex v) const {
@@ -56,7 +57,7 @@ public:
         return adj_[v].size();
     }
 
-    const std::unordered_set<Vertex>& neighbors(Vertex v) const {
+    const std::vector<Vertex>& neighbors(Vertex v) const {
         check_vertex(v);
 
         return adj_[v];

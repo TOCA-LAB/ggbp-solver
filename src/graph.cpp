@@ -9,15 +9,17 @@
 
 
 void Graph::add_edge(Vertex u, Vertex v) {
+    if (u == v)
+        return;
+    
     check_vertex(u);
     check_vertex(v);
 
     // unordered_set prevents duplicates automatically
-    bool inserted_uv = adj_[u].insert(v).second;
-    bool inserted_vu = adj_[v].insert(u).second;
+    adj_[u].push_back(v);
+    adj_[v].push_back(u);
 
-    if (inserted_uv && inserted_vu)
-        ++nedges_;
+    ++nedges_;
 }
 
 std::vector<Vertex> Graph::vertices(void) const {
@@ -30,13 +32,18 @@ bool Graph::remove_edge(Vertex u, Vertex v) {
     check_vertex(u);
     check_vertex(v);
 
-    bool removed_uv = adj_[u].erase(v) > 0;
-    bool removed_vu = adj_[v].erase(u) > 0;
+    auto uv = std::find(adj_[u].begin(), adj_[u].end(), v);
+    auto vu = std::find(adj_[v].begin(), adj_[v].end(), u);
 
-    if (removed_uv && removed_vu) {
+    if (uv != adj_[u].end() && vu != adj_[v].end()) {
+        adj_[u].erase(uv);
+        adj_[v].erase(vu);
+
         --nedges_;
+        
         return true;
     }
+
     return false;
 }
 

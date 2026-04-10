@@ -18,6 +18,7 @@ option(BUILD_TESTS "Build unit tests" ON)
 
 find_package(GUROBI REQUIRED)
 find_package(Boost REQUIRED CONFIG)
+find_package(OpenMP REQUIRED)
 
 add_subdirectory(src)
 add_subdirectory(app)
