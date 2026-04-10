@@ -9,6 +9,9 @@
 
 
 void Graph::add_edge(Vertex u, Vertex v) {
+    if (u == v)
+        return;
+    
     check_vertex(u);
     check_vertex(v);
 
