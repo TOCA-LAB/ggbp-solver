@@ -81,6 +81,9 @@ int main(int argc, char* argv[]) {
         .required()
         .scan<'u', unsigned>();
     
+    program.add_argument("-S", "--seed")
+        .help("Define seed for the RNG");
+
     program.add_argument("-o", "--out-file")
         .help("Choose the output file");
         
@@ -115,7 +118,6 @@ int main(int argc, char* argv[]) {
             end_ptr = ptr;
     }
     std::string graph_name(ptr+1, end_ptr);
-
 
     const unsigned n = graph.order();                   // size of chromosomes
     const unsigned p = program.get<unsigned>("-p");     // size of population
@@ -153,7 +155,7 @@ int main(int argc, char* argv[]) {
         
         if (program["--verbose"] == true) {
             cout << "Generation " << generation << " best solution found has objective value = "
-                      << fitness << endl;
+                 << fitness << endl;
         }
 
         iters.push_back(fitness);

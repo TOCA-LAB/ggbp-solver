@@ -4,6 +4,7 @@
 #include <vector>
 #include <tuple>
 #include <string>
+#include <random>
 
 #include "ggbp/graph.hpp"
 
@@ -31,7 +32,16 @@ namespace ggbp::brkga {
 }
 
 namespace ggbp::grasp {
-    void grasp(Graph const &graph, int r, int max_it, std::vector<int>& burning_sequence, bool verbose);
+    void grasp(
+        Graph const &graph,
+        int r,
+        int max_it,
+        std::default_random_engine &e,
+        std::vector<int>& burning_sequence,
+        std::vector<int> &iters,
+        int &first_best,
+        bool verbose
+    );
 }
 
 namespace ggbp::heuristics {

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <chrono>
+#include <random>
 #include <string>
 #include <fstream>
 #include "argparse/argparse.hpp"
@@ -14,7 +15,11 @@ int main(int argc, char* argv[]) {
     using std::chrono::duration;
     using std::chrono::seconds;
 
-    argparse::ArgumentParser program("RunBRKGA");
+    argparse::ArgumentParser program("GGBP-GRASP");
+
+    std::string format;
+    program.add_argument("format")
+        .store_into(format);
 
     std::string graph_file_path;
     program.add_argument("file_path")
@@ -29,17 +34,19 @@ int main(int argc, char* argv[]) {
     int T;
     program.add_argument("-T", "--iter")
         .help("Define the number of iterations of GRASP")
-        .store_into(T)
-        .default_value(100);
+        .default_value(100)
+        .store_into(T);
 
     program.add_argument("-V", "--verbose")
         .help("Increase output verbosity")
-          .flag();
+        .flag();
 
-    program.add_argument("-d", "--debug")
-        .help("Choose to run only some functions")
-        .default_value("normal")
-        .required();
+    program.add_argument("-S", "--seed")
+        .help("Define seed for the RNG")
+        .scan<'u', unsigned>();
+
+    program.add_argument("-o", "--out-file")
+        .help("Choose the output file");
 
         
     try {
@@ -53,10 +60,20 @@ int main(int argc, char* argv[]) {
 
     auto t1 = high_resolution_clock::now();
 
-    Graph graph(graph_file_path);
+    Graph graph;
 
+    if (format == "mtx") {
+        graph = Graph::from_mtx_file(graph_file_path);
+    } else if (format == "g6") {
+        std::ifstream g6_file(graph_file_path);
+        std::string g6_string {std::istreambuf_iterator<char>(g6_file), std::istreambuf_iterator<char>() };
+        graph = Graph(g6_string);
+    } else {
+        cout << "Invalid graph format" << endl;
+    }
+    
     std::string::iterator ptr, end_ptr;
-    for (ptr = graph_file_path.end(); *ptr != '/'; --ptr) {
+    for (ptr = graph_file_path.end(); *ptr != '\\' && *ptr != '/'; --ptr) {
         if (*ptr == '.')
             end_ptr = ptr;
     }
@@ -67,9 +84,21 @@ int main(int argc, char* argv[]) {
     if (verbose)
         std::cout << graph_name << ": " << graph.order() << " " << graph.size() << std::endl;
 
-    vector<int> burning_sequence;
+    unsigned seed;
 
-    ggbp::grasp::grasp(graph, r, T, burning_sequence, verbose);
+    if (program.present("-S")) {
+        seed = program.get<unsigned>("-S");
+    } else {
+        seed = std::chrono::system_clock::now().time_since_epoch().count();
+    }
+
+    static std::default_random_engine e(seed);
+
+    vector<int> burning_sequence;
+    vector<int> iters;
+    int first_best;
+
+    ggbp::grasp::grasp(graph, r, T, e, burning_sequence, iters, first_best, verbose);
 
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;
@@ -82,17 +111,32 @@ int main(int argc, char* argv[]) {
         std::cout << *i+1 << ","; // adding 1 to match the original vertex index 
     std::cout << "]" << std::endl;
 
-    std::ofstream benchmark_csv("./benchmarks/runs/benchmark-r" + std::to_string(r) + ".csv", std::ofstream::app);
-    if (!benchmark_csv)
-        std::cout << "Erro ao abrir o arquivo .csv" << std::endl;
-    else {	
-        benchmark_csv << graph_name << "; "
-                << graph.order() << "; "<< graph.size() << "; "
-                << burning_sequence.size() << "; "
-                << ms_double.count()/1000 << "; [";
-        for (auto i = burning_sequence.begin(); i < burning_sequence.end(); ++i)
-            benchmark_csv << *i+1 << ","; // adding 1 to match the original vertex index 
-        benchmark_csv << "]" << std::endl;
+    if (program.present("-o")) {
+        std::ofstream out_file(program.get("-o"));
+        
+        if (!out_file) {
+            cout << "Arquivo de saída inválido" << endl;
+            
+            return 1;
+        }
+
+        out_file << graph_name << "\n"
+                 << graph.order() << " " << graph.size() << "\n\n"
+                 << seed << endl
+                 << "Iters: " << T << "\n\n";
+        
+        out_file << burning_sequence.size() << endl;
+
+        for (auto u : burning_sequence)
+            out_file << u << ", ";
+        out_file << "\n\n";
+
+        out_file << ms_double.count()/1000 << "\n\n";
+
+        out_file << first_best << endl;
+        for (auto i : iters)
+            out_file << i << ", ";
+        out_file << "\n\n";
     }
     return 0;
 }

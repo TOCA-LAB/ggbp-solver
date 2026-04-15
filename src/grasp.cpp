@@ -28,20 +28,18 @@ int calculateCost(int v, Graph const &graph, int r, const vector<int> &sequence,
     return cost;
 }
 
-vector<int> construct(Graph const &graph, int r) {
+vector<int> construct(Graph const &graph, int r, default_random_engine &e) {
     auto t1 = chrono::high_resolution_clock::now();
 
     int n_vertices = graph.order(), n_burning = 0;
 
     vector<int> burning_sequence, cost(n_vertices), burning(n_vertices), burning_neighbors(n_vertices), to_burn;
 
-    unsigned seed = chrono::system_clock::now().time_since_epoch().count();
-    static default_random_engine e(seed);
-    static uniform_real_distribution<float> f(0,1);
+    uniform_real_distribution<float> f(0,1);
     float a = f(e);
 
     auto t2 = chrono::high_resolution_clock::now();
-    std::chrono::_V2::system_clock::time_point t31, t32;
+    chrono::steady_clock::time_point t31, t32;
 
     while (n_burning < n_vertices) {
         t31 = chrono::high_resolution_clock::now();
@@ -105,7 +103,7 @@ vector<int> construct(Graph const &graph, int r) {
     chrono::duration<double, std::milli> pri = t2 - t1;
     chrono::duration<double, std::milli> seg = t32 - t31;
     chrono::duration<double, std::milli> ter = t4 - t1;
-    cout << pri.count()/1000 << ", " << seg.count()/1000 << ", " << ter.count()/1000 << endl;
+    // cout << pri.count()/1000 << ", " << seg.count()/1000 << ", " << ter.count()/1000 << endl;
     return burning_sequence;
 }
 
@@ -163,18 +161,38 @@ void localSearch(vector<int>& burning_sequence, Graph const &graph, int r) {
         swap(burning_sequence, temp_burning_sequence);
 }
 
-void grasp(Graph const &graph, int r, int max_it, vector<int>& burning_sequence, bool verbose) {
+void grasp(
+    Graph const &graph,
+    int r,
+    int max_it,
+    default_random_engine &e,
+    vector<int>& burning_sequence,
+    vector<int> &iters,
+    int &first_best,
+    bool verbose)
+{
     vector<int> temp_burning_sequence;
-    
+    iters.reserve(max_it);
+    first_best = 0;
+    int best = graph.order();
+
     for (int i = 0; i < max_it; i++) {
         cout << "Iteration " << i+1 << endl;
-        temp_burning_sequence = construct(graph, r);
-        localSearch(temp_burning_sequence, graph, r);
+        temp_burning_sequence = construct(graph, r, e);
+        // localSearch(temp_burning_sequence, graph, r);
 
         if (burning_sequence.size() == 0)
             swap(temp_burning_sequence, burning_sequence);
         else if (temp_burning_sequence.size() < burning_sequence.size())
             swap(temp_burning_sequence, burning_sequence);
+        
+        cout << "Best: " << burning_sequence.size() << endl;
+        iters.push_back(burning_sequence.size());
+
+        if (iters[i] < best) {
+            best = iters[i];
+            first_best = i;
+        }
     }
 }
 
