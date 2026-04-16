@@ -81,9 +81,6 @@ int main(int argc, char* argv[]) {
 
     int verbose = program["--verbose"] == true ? 1 : 0;
 
-    if (verbose)
-        std::cout << graph_name << ": " << graph.order() << " " << graph.size() << std::endl;
-
     unsigned seed;
 
     if (program.present("-S")) {
@@ -122,6 +119,7 @@ int main(int argc, char* argv[]) {
 
         out_file << graph_name << "\n"
                  << graph.order() << " " << graph.size() << "\n\n"
+                 << "r=" << r << endl
                  << seed << endl
                  << "Iters: " << T << "\n\n";
         

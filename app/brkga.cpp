@@ -23,16 +23,16 @@ int main(int argc, char* argv[]) {
         .store_into(format);
 
     program.add_argument("file_path");
-
+    
     int r;
     program.add_argument("r")
         .help("Define the r constant for the GGBP")
         .required()
         .store_into(r);
-    
+
     program.add_argument("-V", "--verbose")
         .help("Increase output verbosity")
-          .flag();
+        .flag();
 
     program.add_argument("-d", "--debug")
         .help("Choose to run only some functions")
@@ -113,7 +113,7 @@ int main(int argc, char* argv[]) {
     }
     
     std::string::iterator ptr, end_ptr;
-    for (ptr = graph_file_path.end(); *ptr != '/'; --ptr) {
+    for (ptr = graph_file_path.end(); *ptr != '/' && *ptr != '\\'; --ptr) {
         if (*ptr == '.')
             end_ptr = ptr;
     }
@@ -175,10 +175,7 @@ int main(int argc, char* argv[]) {
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;
 
-    cout << graph_name << "; "
-         << graph.order() << "; " << graph.size() << "\n"
-         << rngSeed << "\n"
-         << algorithm.getBestFitness() << "\n"
+    cout << algorithm.getBestFitness() << endl
          << ms_double.count()/1000 << endl;
 
     if (program.present("-o")) {
@@ -192,13 +189,15 @@ int main(int argc, char* argv[]) {
 
         out_file << graph_name << "\n"
                  << graph.order() << " " << graph.size() << "\n\n"
+                 << "r=" << r << endl
                  << rngSeed << endl
-                 << "p: " << p << endl
-                 << "pe: " << pe << endl
-                 << "pm: " << pm << endl
-                 << "rhoe: " << rhoe << endl
-                 << "K: " << K << endl
-                 << "MAXT: " << MAXT << "\n\n";
+                 << "p=" << p << endl
+                 << "gens=" << MAX_GENS << endl
+                 << "pe=" << pe << endl
+                 << "pm=" << pm << endl
+                 << "rhoe=" << rhoe << endl
+                 << "K=" << K << endl
+                 << "MAXT=" << MAXT << "\n\n";
         
         out_file << burning_sequence.size() << endl;
 
