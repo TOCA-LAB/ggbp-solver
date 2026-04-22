@@ -1,7 +1,10 @@
 #include <vector>
 #include <iostream>
+#include <print>
 #include <chrono>
 #include <random>
+
+#include "utils/utils.hpp"
 
 #include "ggbp/ggbp.hpp"
 
@@ -11,7 +14,7 @@ namespace ggbp::grasp {
 using namespace std;
 
 // Use the unburned_neighbors heuristic to estimate how good a vertex is
-int calculateCost(int v, Graph const &graph, int r, vector<int> sequence, vector<bool> burning, int n_burning, vector<int> num_burning_neighbors) {
+int calculate_cost(int v, Graph const &graph, int r, vector<int> sequence, vector<bool> burning, int n_burning, vector<int> num_burning_neighbors) {
     int n_vertices = graph.order();
     
     if (burning[v])
@@ -84,11 +87,11 @@ vector<int> construct(Graph const &graph, int r, default_random_engine &e) {
     float a = f(e);
     
     while (n_burning < n_vertices) {
-        cost[0] = calculateCost(0, graph, r, burning_sequence, burning, n_burning, num_burning_neighbors); 
+        cost[0] = calculate_cost(0, graph, r, burning_sequence, burning, n_burning, num_burning_neighbors); 
 
         int c_min = cost[0], c_max = cost[0];
         for (int i = 1; i < n_vertices; i++) {
-            cost[i] = calculateCost(i, graph, r, burning_sequence, burning, n_burning, num_burning_neighbors);
+            cost[i] = calculate_cost(i, graph, r, burning_sequence, burning, n_burning, num_burning_neighbors);
 
             if (cost[i] < c_min)
                 c_min = cost[i];
@@ -148,58 +151,29 @@ vector<int> construct(Graph const &graph, int r, default_random_engine &e) {
     return burning_sequence;
 }
 
-void localSearch(vector<int>& burning_sequence, Graph const &graph, int r) {
-    int n_vertices = graph.order(), n_burning = 0;
-    auto B = burning_sequence.size();
-    vector<int> temp_burning_sequence, burning(n_vertices), num_burning_neighbors(n_vertices), to_burn;
-    temp_burning_sequence.reserve(B);
+void local_search(vector<int>& burning_sequence, Graph const &graph, int r) {
+    int n_vertices = graph.order();
+    // cout<< burning_sequence.size() << endl;
 
     // static default_random_engine e;
-    
-    int i = 0;
-    while (i < burning_sequence.size() && n_burning < n_vertices) {
-        to_burn.clear();
-        to_burn.reserve(B);
-        vector<int> in_to_burn(n_vertices, 0);
-
-        int current = burning_sequence[i];
-        for (auto v : graph.neighbors(burning_sequence[i])) {
-            if (!burning[v]) {
-                current = v;
-                break;
-            }
-        }
-        if (current = burning_sequence[i]) {
-            i++;
-            continue;
-        }
-
-        temp_burning_sequence.push_back(current);
-        burning[current] = 1;
-        n_burning++;
-
-        // cout << current << endl;
-        for (auto neighbor : graph.neighbors(current)) {
-            num_burning_neighbors[neighbor]++;
-            if (!burning[neighbor] && !in_to_burn[neighbor] && num_burning_neighbors[neighbor] >= r) {
-                to_burn.push_back(neighbor);
-                in_to_burn[neighbor] = 1;
-            }
-        } 
-
-        for (auto v : to_burn) {
-            burning[v] = 1;
-            n_burning++;
-        }
-
-        if (n_burning == n_vertices)
-            temp_burning_sequence.push_back(graph.neighbors(current)[0]);
+    vector<int> temp_burning_sequence;
+    for (int i = 0; i < burning_sequence.size(); i++) {
         
-        i++;
-        
+        temp_burning_sequence = burning_sequence;
+        temp_burning_sequence.erase(temp_burning_sequence.begin() + i);
+
+        // println("{}", burning_sequence);
+        // println("{}", temp_burning_sequence);
+        bool valid_sequence = ggbp::utils::is_burning_sequence(graph, r, temp_burning_sequence);
+        // cout << valid_sequence << endl;
+        if (valid_sequence) {
+            swap(burning_sequence, temp_burning_sequence);
+            i--;
+        }
     }
-    if (i < burning_sequence.size())
-        swap(burning_sequence, temp_burning_sequence);
+
+    // if (temp_burning_sequence.size() < burning_sequence.size())
+    //     swap(burning_sequence, temp_burning_sequence);
 }
 
 void grasp(
@@ -207,7 +181,7 @@ void grasp(
     int r,
     int max_it,
     default_random_engine &e,
-    vector<int>& burning_sequence,
+    vector<int> &burning_sequence,
     vector<int> &iters,
     int &first_best,
     bool verbose)
@@ -220,7 +194,7 @@ void grasp(
     for (int i = 0; i < max_it; i++) {
         cout << "Iteration " << i+1 << endl;
         temp_burning_sequence = construct(graph, r, e);
-        // localSearch(temp_burning_sequence, graph, r);
+        local_search(temp_burning_sequence, graph, r);
 
         if (burning_sequence.size() == 0)
             swap(temp_burning_sequence, burning_sequence);

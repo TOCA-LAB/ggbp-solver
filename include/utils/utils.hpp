@@ -51,6 +51,8 @@ auto enumerate(Iterable& iterable) {
 
 bool is_burning_sequence(Graph const &g, int r, std::vector<int> &burning_sequence, Vertex &unburned);
 
+bool is_burning_sequence(Graph const &g, int r, std::vector<int> const &burning_sequence);
+
 template <class T>
 void bucket_sort(std::vector<T> &v, int n, std::function<bool (T, T)> cmp, std::function<double (T)> val) {
     std::vector<std::vector<T>> B(n);
