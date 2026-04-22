@@ -16,7 +16,7 @@ target_include_directories(ggbp
 )
 add_library(gurobi STATIC IMPORTED)
 if(MSVC)
-    target_compile_options(ggbp PRIVATE -Wall)
+    target_compile_options(ggbp PRIVATE -W3)
 else()
     target_compile_options(ggbp PRIVATE -Wall -Wextra -Wpedantic)
 endif()
