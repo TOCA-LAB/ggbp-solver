@@ -83,12 +83,7 @@ vector<int> construct(Graph const &graph, int r, default_random_engine &e) {
     uniform_real_distribution<float> f(0,1);
     float a = f(e);
     
-    int i = 0;
     while (n_burning < n_vertices) {
-        i++;
-        // cout << i << endl;
-
-
         cost[0] = calculateCost(0, graph, r, burning_sequence, burning, n_burning, num_burning_neighbors); 
 
         int c_min = cost[0], c_max = cost[0];
@@ -101,14 +96,7 @@ vector<int> construct(Graph const &graph, int r, default_random_engine &e) {
                 c_max = cost[i];
         }
 
-        // for (auto i : cost) {
-        //     cout << i << ", ";
-        // }
-        // cout << endl;
-
         float threshold = c_min + a * (c_max - c_min);
-
-        // cout << threshold << endl;
 
         // Populate the restricted candidate list using a quality-based scheme
         vector<int> RCL;
@@ -120,18 +108,14 @@ vector<int> construct(Graph const &graph, int r, default_random_engine &e) {
 
         RCL.shrink_to_fit();
 
-        // for (auto u : RCL) {
-        //     cout << burning[u] << ", ";
-        // }
-        // cout << endl;
-        
-
+        // Choose random unburned vertex from RCL
         uniform_int_distribution<> u(0, RCL.size()-1);
         int current;
         do {
             current = RCL[u(e)];
         } while (burning[current]);
     
+        // Burn the choosen vertex and propagate the fire
         burning_sequence.push_back(current);
         if (!in_to_burn[current]) {
             to_burn.push_front(current);
