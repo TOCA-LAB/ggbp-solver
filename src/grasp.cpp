@@ -10,57 +10,107 @@ namespace ggbp::grasp {
 
 using namespace std;
 
-int calculateCost(int v, Graph const &graph, int r, const vector<int> &sequence, const vector<int> &burning, const vector<int> &burning_neighbors) {
+// Use the unburned_neighbors heuristic to estimate how good a vertex is
+int calculateCost(int v, Graph const &graph, int r, vector<int> sequence, vector<bool> burning, int n_burning, vector<int> num_burning_neighbors) {
+    int n_vertices = graph.order();
+    
     if (burning[v])
-        return 0;
+        return n_vertices;
 
-    int cost = -1, degree = graph.degree(v), n_vertices = graph.order();
+    forward_list<int> to_burn;
 
-    if (degree < r)
-        cost -= 10 * n_vertices * graph.degree(v);
+    bool first = true;
+    int max_vertex = v;
+    
 
-    for (auto neighbor : graph.neighbors(v))
-        if (!burning[neighbor] && burning_neighbors[neighbor] < r)
-            cost -= n_vertices/(graph.degree(neighbor)*(r - burning_neighbors[neighbor]));
-       
-    cost -= degree;
+    while (n_burning < n_vertices) {
+        forward_list<int> next_to_burn;
+        vector<int> in_to_burn(n_vertices, 0);
 
-    return cost;
+        int max_neighbors = 0;
+
+        if (first) {
+            first = false;
+        } else {
+            for (int u = 0; u < n_vertices; u++) {
+                if (graph.degree(u) - num_burning_neighbors[u] > max_neighbors && !burning[u] && !in_to_burn[u]) {
+                    max_vertex = u;
+                    max_neighbors = graph.degree(u) - num_burning_neighbors[u];
+                }
+            }
+        }
+
+        sequence.push_back(max_vertex);
+        to_burn.push_front(max_vertex);
+        in_to_burn[max_vertex] = 1;
+
+        if (n_burning == n_vertices)
+            break;
+    
+        for (auto v : to_burn) {
+            burning[v] = 1;
+            n_burning++;
+        }
+        
+        for (auto v : to_burn) {
+            for (auto u : graph.neighbors(v)) {
+                num_burning_neighbors[u]++;
+                
+                if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
+                    next_to_burn.push_front(u);
+                    in_to_burn[u] = 1;
+                }
+            }
+        }
+
+        if (n_burning == n_vertices)
+            sequence.push_back(n_vertices - 1);
+        
+        to_burn = next_to_burn;
+        next_to_burn.clear();
+    }
+
+    return sequence.size();
 }
 
 vector<int> construct(Graph const &graph, int r, default_random_engine &e) {
-    auto t1 = chrono::high_resolution_clock::now();
-
     int n_vertices = graph.order(), n_burning = 0;
 
-    vector<int> burning_sequence, cost(n_vertices), burning(n_vertices), burning_neighbors(n_vertices), to_burn;
+    vector<int> burning_sequence, cost(n_vertices), num_burning_neighbors(n_vertices);
+    forward_list<int> to_burn, next_to_burn;
+    vector<bool> burning(n_vertices, 0), in_to_burn(n_vertices, 0);
 
     uniform_real_distribution<float> f(0,1);
     float a = f(e);
-
-    auto t2 = chrono::high_resolution_clock::now();
-    chrono::steady_clock::time_point t31, t32;
-
+    
+    int i = 0;
     while (n_burning < n_vertices) {
-        t31 = chrono::high_resolution_clock::now();
+        i++;
+        // cout << i << endl;
 
-        to_burn.clear();
-        vector<int> in_to_burn(n_vertices, 0);
 
-        cost[0] = calculateCost(0, graph, r, burning_sequence, burning, burning_neighbors); 
+        cost[0] = calculateCost(0, graph, r, burning_sequence, burning, n_burning, num_burning_neighbors); 
 
-        int g_min = cost[0], g_max = cost[0];
+        int c_min = cost[0], c_max = cost[0];
         for (int i = 1; i < n_vertices; i++) {
-            cost[i] = calculateCost(i, graph, r, burning_sequence, burning, burning_neighbors);
+            cost[i] = calculateCost(i, graph, r, burning_sequence, burning, n_burning, num_burning_neighbors);
 
-            if (cost[i] < g_min)
-                g_min = cost[i];
-            if (cost[i] > g_max)
-                g_max = cost[i];
+            if (cost[i] < c_min)
+                c_min = cost[i];
+            if (cost[i] > c_max)
+                c_max = cost[i];
         }
-        
-        int threshold = g_min + a * (g_max - g_min);
 
+        // for (auto i : cost) {
+        //     cout << i << ", ";
+        // }
+        // cout << endl;
+
+        float threshold = c_min + a * (c_max - c_min);
+
+        // cout << threshold << endl;
+
+        // Populate the restricted candidate list using a quality-based scheme
         vector<int> RCL;
         RCL.reserve(n_vertices/10);
 
@@ -70,6 +120,12 @@ vector<int> construct(Graph const &graph, int r, default_random_engine &e) {
 
         RCL.shrink_to_fit();
 
+        // for (auto u : RCL) {
+        //     cout << burning[u] << ", ";
+        // }
+        // cout << endl;
+        
+
         uniform_int_distribution<> u(0, RCL.size()-1);
         int current;
         do {
@@ -77,16 +133,9 @@ vector<int> construct(Graph const &graph, int r, default_random_engine &e) {
         } while (burning[current]);
     
         burning_sequence.push_back(current);
-        burning[current] = 1;
-        n_burning++;
-
-        for (auto neighbor : graph.neighbors(current)) {
-            burning_neighbors[neighbor]++;
-
-            if (!burning[neighbor] && !in_to_burn[neighbor] && burning_neighbors[neighbor] >= r) {
-                to_burn.push_back(neighbor);
-                in_to_burn[neighbor] = 1;
-            }
+        if (!in_to_burn[current]) {
+            to_burn.push_front(current);
+            in_to_burn[current] = true;
         }
 
         for (auto v : to_burn) {
@@ -94,23 +143,31 @@ vector<int> construct(Graph const &graph, int r, default_random_engine &e) {
             n_burning++;
         }
 
-        if (n_burning == n_vertices)
-            burning_sequence.push_back(graph.neighbors(current)[0]);
+        for (auto v : to_burn) {
+            for (auto u : graph.neighbors(v)) {
+                num_burning_neighbors[u]++;
+                
+                if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
+                    next_to_burn.push_front(u);
+                    in_to_burn[u] = true;
+                }
+            }
+        }
 
-        t32 = chrono::high_resolution_clock::now();
+        if (n_burning == n_vertices)
+            burning_sequence.push_back(n_vertices - 1);
+
+        to_burn = next_to_burn;
+        next_to_burn.clear();
     }
-    auto t4 = chrono::high_resolution_clock::now();
-    chrono::duration<double, std::milli> pri = t2 - t1;
-    chrono::duration<double, std::milli> seg = t32 - t31;
-    chrono::duration<double, std::milli> ter = t4 - t1;
-    // cout << pri.count()/1000 << ", " << seg.count()/1000 << ", " << ter.count()/1000 << endl;
+    
     return burning_sequence;
 }
 
 void localSearch(vector<int>& burning_sequence, Graph const &graph, int r) {
     int n_vertices = graph.order(), n_burning = 0;
     auto B = burning_sequence.size();
-    vector<int> temp_burning_sequence, burning(n_vertices), burning_neighbors(n_vertices), to_burn;
+    vector<int> temp_burning_sequence, burning(n_vertices), num_burning_neighbors(n_vertices), to_burn;
     temp_burning_sequence.reserve(B);
 
     // static default_random_engine e;
@@ -139,8 +196,8 @@ void localSearch(vector<int>& burning_sequence, Graph const &graph, int r) {
 
         // cout << current << endl;
         for (auto neighbor : graph.neighbors(current)) {
-            burning_neighbors[neighbor]++;
-            if (!burning[neighbor] && !in_to_burn[neighbor] && burning_neighbors[neighbor] >= r) {
+            num_burning_neighbors[neighbor]++;
+            if (!burning[neighbor] && !in_to_burn[neighbor] && num_burning_neighbors[neighbor] >= r) {
                 to_burn.push_back(neighbor);
                 in_to_burn[neighbor] = 1;
             }
