@@ -155,34 +155,41 @@ void local_search(vector<int>& burning_sequence, Graph const &graph, int r) {
     int n_vertices = graph.order();
     // cout<< burning_sequence.size() << endl;
 
-    // static default_random_engine e;
-    vector<int> temp_burning_sequence;
+    bool changed = true;
+    
+    while(changed) {
+        changed = false;
 
-    vector<int> best_burning_sequence = burning_sequence;
-    vector<int> best_history;
+        vector<int> temp_burning_sequence;
 
-    ggbp::utils::burning_history(graph, r, best_burning_sequence, best_history);
+        vector<int> best_burning_sequence = burning_sequence;
+        vector<int> best_history;
 
-    for (int i = 0; i < burning_sequence.size(); i++) {
-        temp_burning_sequence = burning_sequence;
-        temp_burning_sequence.erase(temp_burning_sequence.begin() + i);
-
-        // println("{}", burning_sequence);
-        // println("{}", temp_burning_sequence);
-        vector<int> history;
-        bool valid_sequence = ggbp::utils::burning_history(graph, r, temp_burning_sequence, history);
+        ggbp::utils::burning_history(graph, r, best_burning_sequence, best_history);
         
-        if (valid_sequence) {
-            if (temp_burning_sequence.size() < best_burning_sequence.size() &&
-                history > best_history)
-            {
-                swap(best_burning_sequence, temp_burning_sequence);
+        for (int i = 0; i < burning_sequence.size(); i++) {
+            temp_burning_sequence = burning_sequence;
+            temp_burning_sequence.erase(temp_burning_sequence.begin() + i);
+
+            // println("{}", burning_sequence);
+            // println("{}", temp_burning_sequence);
+            vector<int> history;
+            bool valid_sequence = ggbp::utils::burning_history(graph, r, temp_burning_sequence, history);
+
+            if (valid_sequence) {
+                if (temp_burning_sequence.size() < best_burning_sequence.size() && history > best_history) {
+                    swap(best_burning_sequence, temp_burning_sequence);
+                    best_history = history;
+                }
             }
+        }
+
+        if (best_burning_sequence.size() < burning_sequence.size()) {
+            swap(burning_sequence, best_burning_sequence);
+            changed = true;
         }
     }
 
-    if (best_burning_sequence.size() < burning_sequence.size())
-        swap(burning_sequence, best_burning_sequence);
 }
 
 void grasp(
@@ -203,7 +210,13 @@ void grasp(
     for (int i = 0; i < max_it; i++) {
         cout << "Iteration " << i+1 << endl;
         temp_burning_sequence = construct(graph, r, e);
+
+        cout << temp_burning_sequence.size() << endl;
+
         local_search(temp_burning_sequence, graph, r);
+
+        cout << temp_burning_sequence.size() << endl;
+
 
         if (burning_sequence.size() == 0)
             swap(temp_burning_sequence, burning_sequence);
