@@ -157,23 +157,32 @@ void local_search(vector<int>& burning_sequence, Graph const &graph, int r) {
 
     // static default_random_engine e;
     vector<int> temp_burning_sequence;
+
+    vector<int> best_burning_sequence = burning_sequence;
+    vector<int> best_history;
+
+    ggbp::utils::burning_history(graph, r, best_burning_sequence, best_history);
+
     for (int i = 0; i < burning_sequence.size(); i++) {
-        
         temp_burning_sequence = burning_sequence;
         temp_burning_sequence.erase(temp_burning_sequence.begin() + i);
 
         // println("{}", burning_sequence);
         // println("{}", temp_burning_sequence);
-        bool valid_sequence = ggbp::utils::is_burning_sequence(graph, r, temp_burning_sequence);
-        // cout << valid_sequence << endl;
+        vector<int> history;
+        bool valid_sequence = ggbp::utils::burning_history(graph, r, temp_burning_sequence, history);
+        
         if (valid_sequence) {
-            swap(burning_sequence, temp_burning_sequence);
-            i--;
+            if (temp_burning_sequence.size() < best_burning_sequence.size() &&
+                history > best_history)
+            {
+                swap(best_burning_sequence, temp_burning_sequence);
+            }
         }
     }
 
-    // if (temp_burning_sequence.size() < burning_sequence.size())
-    //     swap(burning_sequence, temp_burning_sequence);
+    if (best_burning_sequence.size() < burning_sequence.size())
+        swap(burning_sequence, best_burning_sequence);
 }
 
 void grasp(

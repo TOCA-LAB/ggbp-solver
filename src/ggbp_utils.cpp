@@ -120,4 +120,65 @@ bool is_burning_sequence(Graph const &g, int r, vector<int> const &burning_seque
     return true;
 }
 
+bool burning_history(Graph const &g, int r, vector<int> const &burning_sequence, vector<int> &history) {
+    int num_vertices = g.order();
+    int B = burning_sequence.size();
+
+    vector<bool> in_sequence(num_vertices, false);
+    vector<bool> burned(num_vertices, false);
+    vector<int> num_burned_neighbors(num_vertices, 0);
+
+    history.assign(B,0);
+
+    forward_list<int> to_burn;
+    vector<bool> in_to_burn(num_vertices, false);
+    forward_list<int> next_to_burn;
+
+    for (int i = 0; i < B; i++) {
+        auto u = burning_sequence[i];
+        
+        if (!burned[u]) {
+            burned[u] = true;
+            history[i]++;
+
+
+            for (auto w : g.neighbors(u)) {
+                num_burned_neighbors[w]++;
+
+                if (!in_to_burn[w] && !burned[w] && num_burned_neighbors[w] >= r) {
+                    next_to_burn.push_front(w);
+                    in_to_burn[w] = true;
+                }
+            }
+        }
+
+        for (auto v : to_burn) {
+            if (!burned[v]) {
+                burned[v] = true;
+                history[i]++;
+
+                for (auto w : g.neighbors(v)) {
+                    num_burned_neighbors[w]++;
+
+                    if (!in_to_burn[w] && !burned[w] && num_burned_neighbors[w] >= r) {
+                        next_to_burn.push_front(w);
+                        in_to_burn[w] = true;
+                    }
+                }
+            }
+        }
+        
+        to_burn = next_to_burn;
+        next_to_burn.clear();
+        in_to_burn.assign(num_vertices, false);
+    }
+
+    for (int u = 0; u < num_vertices; u++) {
+        if (!burned[u])
+            return false;
+    }
+
+    return true;
+}
+
 }
