@@ -139,5 +139,6 @@ int main(int argc, char* argv[]) {
             out_file << i << ", ";
         out_file << "\n\n";
     }
+    
     return 0;
 }

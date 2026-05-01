@@ -3,8 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
-#include <iostream>
-#include <print>
 
 #include "ggbp/graph.hpp"
 
@@ -15,7 +13,6 @@ namespace ggbp::utils {
 using std::vector, std::forward_list;
 
 bool is_burning_sequence(Graph const &g, int r, vector<int> &burning_sequence, Vertex &unburned) {
-    std::println("B: {}", burning_sequence.size());
     int num_vertices = g.order();
 
     vector<bool> in_sequence(num_vertices, false);

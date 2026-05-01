@@ -232,10 +232,6 @@ void local_search(vector<int>& burning_sequence, Graph const &graph, int r) {
 
             int turns = ggbp::utils::burning_turns(graph, r, temp_burning_sequence);
 
-            if (turns != 0 && turns < 5) {
-                println("{}", temp_burning_sequence);
-            }
-
             if (turns != 0 && turns < best_turns) {
                 swap(best_burning_sequence, temp_burning_sequence);
                 best_turns = turns;
@@ -270,12 +266,7 @@ void grasp(
         cout << "Iteration " << i+1 << endl;
         temp_burning_sequence = construct(graph, r, e);
 
-        cout << temp_burning_sequence.size() << endl;
-
         local_search(temp_burning_sequence, graph, r);
-
-        cout << temp_burning_sequence.size() << endl;
-
 
         if (burning_sequence.size() == 0)
             swap(temp_burning_sequence, burning_sequence);
