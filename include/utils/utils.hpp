@@ -51,7 +51,7 @@ auto enumerate(Iterable& iterable) {
 
 bool is_burning_sequence(Graph const &g, int r, std::vector<int> &burning_sequence, Vertex &unburned);
 
-bool is_burning_sequence(Graph const &g, int r, std::vector<int> const &burning_sequence);
+int burning_turns(Graph const &g, int r, std::vector<int> const &burning_sequence);
 
 bool burning_history(Graph const &g, int r, std::vector<int> const &burning_sequence, std::vector<int> &history);
 

@@ -7,6 +7,9 @@
 #include "ggbp/ggbp.hpp"
 #include "ggbp/graph.hpp"
 
+#include "utils/utils.hpp"
+#include <print>
+
 using std::vector;
 using std::cout, std::endl;
 
@@ -94,7 +97,7 @@ int main(int argc, char* argv[]) {
     vector<int> burning_sequence;
     vector<int> iters;
     int first_best;
-
+    
     ggbp::grasp::grasp(graph, r, T, e, burning_sequence, iters, first_best, verbose);
 
     auto t2 = high_resolution_clock::now();

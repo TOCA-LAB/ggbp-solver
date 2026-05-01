@@ -1,4 +1,5 @@
 #include <vector>
+#include <algorithm>
 #include <iostream>
 #include <print>
 #include <chrono>
@@ -179,7 +180,7 @@ void local_search(vector<int>& burning_sequence, Graph const &graph, int r) {
             if (valid_sequence) {
                 if (temp_burning_sequence.size() < best_burning_sequence.size() && history > best_history) {
                     swap(best_burning_sequence, temp_burning_sequence);
-                    best_history = history;
+                    swap(best_history, history);
                 }
             }
         }
@@ -187,6 +188,64 @@ void local_search(vector<int>& burning_sequence, Graph const &graph, int r) {
         if (best_burning_sequence.size() < burning_sequence.size()) {
             swap(burning_sequence, best_burning_sequence);
             changed = true;
+        }
+    }
+
+    vector<bool> in_sequence(n_vertices, false);
+
+    for (auto u : burning_sequence) {
+        in_sequence[u] = true;
+    }
+
+    // Maybe quickselect ?
+    int k = n_vertices - burning_sequence.size();
+
+    auto cmp = [&graph](int left, int right) { return (graph.degree(left) > graph.degree(right)); };
+
+    vector<int> vertex_queue;
+    vertex_queue.reserve(k);
+
+    for (int u = 0; u < n_vertices; u++) {
+        if (!in_sequence[u]) {
+            if (vertex_queue.size() < k) {
+                vertex_queue.push_back(u);
+                push_heap(vertex_queue.begin(), vertex_queue.end());
+            } else {
+                pop_heap(vertex_queue.begin(), vertex_queue.end());
+
+                vertex_queue.push_back(u);
+                push_heap(vertex_queue.begin(), vertex_queue.end());
+            }
+        }
+    }
+
+
+    for (auto u : vertex_queue) {
+        vector<int> temp_burning_sequence;
+
+        vector<int> best_burning_sequence = burning_sequence;
+        int best_turns = burning_sequence.size();
+        
+        for (int i = 0; i < burning_sequence.size(); i++) {
+            temp_burning_sequence = burning_sequence;
+            temp_burning_sequence.erase(temp_burning_sequence.begin() + i);
+
+            int turns = ggbp::utils::burning_turns(graph, r, temp_burning_sequence);
+
+            if (turns != 0 && turns < 5) {
+                println("{}", temp_burning_sequence);
+            }
+
+            if (turns != 0 && turns < best_turns) {
+                swap(best_burning_sequence, temp_burning_sequence);
+                best_turns = turns;
+            }
+        }
+
+        best_burning_sequence.resize(best_turns);
+
+        if (best_burning_sequence.size() < burning_sequence.size()) {
+            swap(burning_sequence, best_burning_sequence);
         }
     }
 
