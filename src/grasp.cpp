@@ -227,7 +227,7 @@ void local_search(vector<int>& burning_sequence, Graph const &graph, int r) {
         
         for (int i = 0; i < burning_sequence.size(); i++) {
             temp_burning_sequence = burning_sequence;
-            temp_burning_sequence.erase(temp_burning_sequence.begin() + i);
+            temp_burning_sequence[i] = u;
 
             int turns = ggbp::utils::burning_turns(graph, r, temp_burning_sequence);
 
