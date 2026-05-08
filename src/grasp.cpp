@@ -197,7 +197,6 @@ void local_search(vector<int>& burning_sequence, Graph const &graph, int r) {
     // Qual k escolher?
     int k = (n_vertices - burning_sequence.size()) / 10;
 
-
     // Talvez quickselect?
     auto cmp = [&graph](int left, int right) { return (graph.degree(left) > graph.degree(right)); };
 
@@ -211,13 +210,13 @@ void local_search(vector<int>& burning_sequence, Graph const &graph, int r) {
                 push_heap(vertex_queue.begin(), vertex_queue.end());
             } else {
                 pop_heap(vertex_queue.begin(), vertex_queue.end());
+                vertex_queue.pop_back();
 
                 vertex_queue.push_back(u);
                 push_heap(vertex_queue.begin(), vertex_queue.end());
             }
         }
     }
-
 
     for (auto u : vertex_queue) {
         vector<int> temp_burning_sequence;
