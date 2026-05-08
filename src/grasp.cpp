@@ -142,9 +142,6 @@ vector<int> construct(Graph const &graph, int r, default_random_engine &e) {
             }
         }
 
-        if (n_burning == n_vertices)
-            burning_sequence.push_back(n_vertices - 1);
-
         to_burn = next_to_burn;
         next_to_burn.clear();
     }
@@ -197,9 +194,11 @@ void local_search(vector<int>& burning_sequence, Graph const &graph, int r) {
         in_sequence[u] = true;
     }
 
-    // Maybe quickselect ?
-    int k = n_vertices - burning_sequence.size();
+    // Qual k escolher?
+    int k = (n_vertices - burning_sequence.size()) / 10;
 
+
+    // Talvez quickselect?
     auto cmp = [&graph](int left, int right) { return (graph.degree(left) > graph.degree(right)); };
 
     vector<int> vertex_queue;
