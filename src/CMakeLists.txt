@@ -1,12 +1,13 @@
 set(GGBP_SOURCES
     graph.cpp
+    ggbp_utils.cpp
     greedy.cpp
     decoder.cpp
     grasp.cpp
     cover.cpp
     naive.cpp
     prym.cpp
-    ggbp_utils.cpp
+    pap.cpp
 )
 
 add_library(ggbp STATIC ${GGBP_SOURCES})

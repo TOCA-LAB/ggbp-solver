@@ -100,6 +100,10 @@ namespace ggbp::ilp {
 
         void run_prym(Graph &graph, std::vector<int> &burning_sequence);
     }
+
+    namespace pap {
+        void solve_ilp(Graph &graph, std::vector<int> &seed_set, ggbp::ilp::GurobiParams params);
+    }
 }
 
 #endif

@@ -1,0 +1,89 @@
+#include "gurobi_c++.h"
+#include <vector>
+#include <iostream>
+#include "ggbp/graph.hpp"
+
+#include "ggbp/ggbp.hpp"
+
+namespace ggbp::ilp::pap {
+using std::vector;
+using std::cout, std::endl;
+
+void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp::GurobiParams params) {
+    int const n_vertices = graph.order();
+
+    try {        
+        GRBEnv env(true);
+        env.set(GRB_IntParam_OutputFlag, params.verbose);
+        env.start();
+        GRBModel model(env);
+
+        model.set(GRB_DoubleParam_TimeLimit, params.time_limit);
+        model.set(GRB_DoubleParam_SoftMemLimit, params.soft_mem_limit);
+        model.set(GRB_DoubleParam_MemLimit, params.mem_limit);
+
+        // --- Variáveis ---
+        // s[v, t]: 1 se o vértice v é disseminador no turno t
+        vector<vector<GRBVar>> s(n_vertices, vector<GRBVar>(n_vertices + 1));
+
+        for (int u = 0; u < n_vertices; u++) {
+            for (int t = 0; t < n_vertices + 1; t++) {
+                s[u][t] = model.addVar(0, 1, 0, GRB_BINARY, "s_" + std::to_string(u) + "_" + std::to_string(t));
+            }
+        }
+
+        // --- Restrições ---
+        // 1. Para u ser disseminador no turno t, ou está no conjunto semente,
+        // ou tem r vizinhos disseminadores no turno t-1
+        for (int u = 0; u < n_vertices; u++) {
+            for (int t = 1; t < n_vertices + 1; t++) {
+                GRBLinExpr expr = 0;
+                
+                for (auto v : graph.neighbors(u)) {
+                    expr += s[v][t-1];
+                }
+
+                model.addConstr(expr - r * (s[u][t] - s[u][0]) >= 0, "Spreader_" + std::to_string(u) + "_" + std::to_string(t));
+            }
+        }
+
+        // 2. Ao final, todo vértice deve ser conhecedor
+        for (int u = 0; u < n_vertices; u++) {
+            GRBLinExpr expr = 0;
+            for (auto v : graph.neighbors(u)) {
+                expr += s[v][n_vertices - 1];
+            }
+
+            model.addConstr(s[u][0] + expr >= 1, "Aware_" + std::to_string(u));
+        }
+
+        // Minimiza disseminadores iniciais (conjunto semente)
+        GRBLinExpr obj = 0;
+        for (int u = 0; u < n_vertices; u++) {
+            obj += s[u][0];
+        }
+        model.setObjective(obj, GRB_MINIMIZE);
+
+        model.optimize();
+
+        int opt_status = model.get(GRB_IntAttr_Status);
+
+        seed_set.clear();
+
+        if (opt_status == GRB_OPTIMAL) {
+            for(int u = 0; u < n_vertices; u++) {
+                if (s[u][0].get(GRB_DoubleAttr_X) > 0.5) {
+                    seed_set.push_back(u);
+                }
+            }
+        }
+
+    } catch (GRBException e) {
+        cout << "Error code = " << e.getErrorCode() << endl;
+        cout << e.getMessage() << endl;
+    } catch (...) {
+        cout << "Exception during optimization" << endl;
+    }
+}
+
+}
