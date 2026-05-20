@@ -8,7 +8,6 @@
 #include "ggbp/graph.hpp"
 
 #include "utils/utils.hpp"
-#include <print>
 
 using std::vector;
 using std::cout, std::endl;

@@ -1,7 +1,6 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
-#include <print>
 #include <chrono>
 #include <random>
 #include <forward_list>
