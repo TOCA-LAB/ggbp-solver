@@ -4,6 +4,7 @@
 #include <print>
 #include <chrono>
 #include <random>
+#include <forward_list>
 
 #include "utils/utils.hpp"
 

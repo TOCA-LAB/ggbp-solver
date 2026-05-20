@@ -15,6 +15,7 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 
 
 option(BUILD_TESTS "Build unit tests" ON)
+enable_testing()
 
 find_package(GUROBI REQUIRED)
 find_package(Boost REQUIRED CONFIG)
