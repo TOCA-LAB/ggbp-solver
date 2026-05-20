@@ -4,7 +4,6 @@
 #include "brkga-lib/MTRand.h"
 #include "brkga-lib/BRKGA.h"
 #include "ggbp/graph.hpp"
-#include "ggbp/ggbp.hpp"
 #include "utils/utils.hpp"
 
 #include "ggbp/ggbp.hpp"
@@ -27,21 +26,21 @@ int get_upper_bound(Graph const &g, int const r, int verbose) {
     const long unsigned rngSeed = 0;
     MTRand rng(rngSeed);
 
-	BRKGA< ggbp::brkga::Decoder, MTRand > algorithm(n, p, pe, pm, rhoe, decoder, rng, K, MAXT);
-	unsigned generation = 0;
-	const unsigned X_INTVL = 10;
-	const unsigned X_NUMBER = 2;
-	do {
-		algorithm.evolve();	// evolve the population for one generation
-		if (verbose) {
-			std::cout << "Generation " << generation << " best solution found has objective value = "
-					<< algorithm.getBestFitness() << std::endl;
-		}
+    BRKGA< ggbp::brkga::Decoder, MTRand > algorithm(n, p, pe, pm, rhoe, decoder, rng, K, MAXT);
+    unsigned generation = 0;
+    const unsigned X_INTVL = 10;
+    const unsigned X_NUMBER = 2;
+    do {
+        algorithm.evolve();	// evolve the population for one generation
+        if (verbose) {
+            std::cout << "Generation " << generation << " best solution found has objective value = "
+                    << algorithm.getBestFitness() << std::endl;
+        }
 
-		if((++generation) % X_INTVL == 0) {
-			algorithm.exchangeElite(X_NUMBER);	// exchange top individuals
-		}
-	} while (generation < MAX_GENS);
+        if((++generation) % X_INTVL == 0) {
+            algorithm.exchangeElite(X_NUMBER);	// exchange top individuals
+        }
+    } while (generation < MAX_GENS);
 
     return algorithm.getBestFitness();
 }
@@ -214,8 +213,8 @@ void solve_ilp(Graph &g, int const r, int const B, vector<int> &burning_sequence
 
         burning_sequence.clear();
         if (opt_status == GRB_OPTIMAL) {
-			for(int t = 1; t < B+1; t++) {
-            	for(int u = 0; u < n_vertices; u++) {
+            for(int t = 1; t < B+1; t++) {
+                for(int u = 0; u < n_vertices; u++) {
                     if (y[u][t].get(GRB_DoubleAttr_X) > 0.5) {
                         burning_sequence.push_back(u);
                     }
@@ -242,17 +241,17 @@ void solve_ilp(Graph &g, int const r, int const B, vector<int> &burning_sequence
             err_info.msg = "//OUT OF MEMORY (soft)";
         }
     } catch (GRBException e) {
-		cout << "Error code = " << e.getErrorCode() << endl;
-		cout << e.getMessage() << endl;
+        cout << "Error code = " << e.getErrorCode() << endl;
+        cout << e.getMessage() << endl;
 
         if (e.getErrorCode() == GRB_ERROR_OUT_OF_MEMORY) {
             err_info.ObjVal = B;
             err_info.ObjBound = 0;
             err_info.msg = "//OUT OF MEMORY";
         }
-	} catch (...) {
-		cout << "Exception during optimization" << endl;
-	}
+    } catch (...) {
+        cout << "Exception during optimization" << endl;
+    }
 }
 
 void find_burning_sequence(Graph &g, int const r, std::vector<int> &burning_sequence, LPParams params) {
@@ -263,7 +262,7 @@ void find_burning_sequence(Graph &g, int const r, std::vector<int> &burning_sequ
     int UB = get_upper_bound(g, r, false);
     vector<int> temp_burning_sequence;
 
-	ggbp::ilp::GurobiErrorInfo err_info;
+    ggbp::ilp::GurobiErrorInfo err_info;
 
     int iteration = 0;
     while(LB <= UB) {
@@ -276,7 +275,7 @@ void find_burning_sequence(Graph &g, int const r, std::vector<int> &burning_sequ
             cout << "Trying to find a burning sequence of length " << B << "." << endl;
         }
 
-    	err_info.msg = "";
+        err_info.msg = "";
 
         solve_ilp(g, r, B, temp_burning_sequence, err_info, params);
 
