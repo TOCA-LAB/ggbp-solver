@@ -102,7 +102,7 @@ namespace ggbp::ilp {
     }
 
     namespace pap {
-        void solve_ilp(Graph &graph, std::vector<int> &seed_set, ggbp::ilp::GurobiParams params);
+        void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp::GurobiParams params);
     }
 }
 

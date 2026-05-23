@@ -57,11 +57,28 @@ void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp:
             model.addConstr(s[u][0] + expr >= 1, "Aware_" + std::to_string(u));
         }
 
+        // 3. Restrição adicional
+        for (int u = 0; u < n_vertices; u++) {
+            for (int t = 1; t < n_vertices + 1; t++) {
+                GRBLinExpr expr = 0;
+
+                for (auto v : graph.neighbors(u)) {
+                    expr += s[v][t];
+                }
+                
+                for (int v = 0; v < n_vertices; v++) {
+                    expr += s[v][t] - s[v][t-1];
+                }
+                model.addConstr(s[u][t] + expr >= 1, "Adicional_" + std::to_string(u) + "_" + std::to_string(t));
+            }
+        }
+
         // Minimiza disseminadores iniciais (conjunto semente)
         GRBLinExpr obj = 0;
         for (int u = 0; u < n_vertices; u++) {
             obj += s[u][0];
         }
+        
         model.setObjective(obj, GRB_MINIMIZE);
 
         model.optimize();
