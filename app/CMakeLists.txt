@@ -7,6 +7,9 @@ target_link_libraries(naive PRIVATE ggbp)
 add_executable(prym prym.cpp)
 target_link_libraries(prym PRIVATE ggbp)
 
+add_executable(pap pap.cpp)
+target_link_libraries(pap PRIVATE ggbp)
+
 add_executable(greedy greedy.cpp )
 target_link_libraries(greedy PRIVATE ggbp)
 
