@@ -66,7 +66,10 @@ namespace ggbp::ilp {
         double ObjBound;
         std::string msg;
     };
+        
+    int get_upper_bound(Graph const &g, int const r, bool verbose);
 
+    int get_lower_bound(Graph const &g, int const r, bool verbose);
 
     namespace naive {
         struct LPParams : ggbp::ilp::GurobiParams {
@@ -77,20 +80,18 @@ namespace ggbp::ilp {
 
             LPParams() = default;
         };
-
-        int get_upper_bound(Graph const &g, int const r, int verbose);
         
         void solve_ilp(Graph &g, int const r, int const B, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, LPParams params);
 
-        void find_burning_sequence(Graph &g, int const r, std::vector<int> &burning_sequence, LPParams params);    
+        void find_burning_sequence(Graph &g, int const r, int LB, int UB, std::vector<int> &burning_sequence, LPParams params);    
     }
     
-    namespace cover {
+    namespace cover {    
         std::vector<int> generate_covering_tree(Graph const &g, int const r, std::vector<int> sources);
 
-        void solve_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, bool verbose);
+        void solve_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, ggbp::ilp::GurobiParams params);
 
-        void find_burning_sequence(Graph const &g, int const r, std::vector<int> &burning_sequence, bool verbose);    
+        void find_burning_sequence(Graph const &g, int LB, int UB, int const r, std::vector<int> &burning_sequence, ggbp::ilp::GurobiParams params);    
     }
     
     namespace prym {

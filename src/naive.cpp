@@ -8,10 +8,21 @@
 
 #include "ggbp/ggbp.hpp"
 
-namespace ggbp::ilp::naive {
+namespace ggbp::ilp {
 using namespace std;
 
-int get_upper_bound(Graph const &g, int const r, int verbose) {
+int ggbp::ilp::get_lower_bound(Graph const &g, int const r, bool verbose) {
+    int count = 0;
+    
+    for (auto u = 0; u < g.order(); u++) {
+        if (g.degree(u) < r)
+            count++;
+    }
+
+    return count;
+}
+
+int get_upper_bound(Graph const &g, int const r, bool verbose) {
     const unsigned n = g.order();
     const unsigned p = 60;
     const unsigned MAX_GENS = 25;
@@ -44,6 +55,10 @@ int get_upper_bound(Graph const &g, int const r, int verbose) {
 
     return algorithm.getBestFitness();
 }
+}
+
+namespace ggbp::ilp::naive {
+using namespace std;
 
 void add_radius_cut(GRBModel &model, Graph &g, vector<vector<GRBVar>> x, vector<vector<GRBVar>> y, int const r, int const B) {
     auto num_vertices = g.order();
@@ -220,9 +235,6 @@ void solve_ilp(Graph &g, int const r, int const B, vector<int> &burning_sequence
                     }
                 }
             }
-
-            Vertex u;
-            cout << ggbp::utils::is_burning_sequence(g, r, burning_sequence, u) << endl;
         } else if (opt_status == GRB_TIME_LIMIT) {
             if (model.get(GRB_DoubleAttr_ObjVal) < B)
                 err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
@@ -254,17 +266,15 @@ void solve_ilp(Graph &g, int const r, int const B, vector<int> &burning_sequence
     }
 }
 
-void find_burning_sequence(Graph &g, int const r, std::vector<int> &burning_sequence, LPParams params) {
+void find_burning_sequence(Graph &g, int const r, int LB, int UB, std::vector<int> &burning_sequence, LPParams params) {
     PRECONDITION(r >= 1);
     PRECONDITION(G.order() >= r);
 
-    int LB = 0;
-    int UB = get_upper_bound(g, r, false);
     vector<int> temp_burning_sequence;
 
     ggbp::ilp::GurobiErrorInfo err_info;
 
-    int iteration = 0;
+    int iteration = 1;
     while(LB <= UB) {
         int B = (UB + LB)/2;
 
@@ -279,7 +289,10 @@ void find_burning_sequence(Graph &g, int const r, std::vector<int> &burning_sequ
 
         solve_ilp(g, r, B, temp_burning_sequence, err_info, params);
 
-        if(int(temp_burning_sequence.size()) == 0) {
+        int turns = ggbp::utils::burning_turns(g, r, temp_burning_sequence);
+        temp_burning_sequence.resize(turns);
+
+        if (int(temp_burning_sequence.size()) == 0) {
             if (params.verbose) {
                 cout << "There is no burning sequence of length " << B << "." << endl << endl;
             }

@@ -175,28 +175,25 @@ class LazyCovering: public GRBCallback {
             cout << "Error number: " << e.getErrorCode() << endl;
             cout << e.getMessage() << endl;
         } catch (...) {
-            cout << "Error during callback" << endl;	
+            cout << "Error during callback" << endl;
         }
     }
 };
 
-void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_sequence, bool verbose) {
+void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_sequence, ggbp::ilp::GurobiParams params) {
     int num_vertices = g.order();
     vector<int> vertices = g.vertices();
 
     try {
-        if (verbose)
-            cout << endl;
-        
         GRBEnv env(true);
-        env.set(GRB_IntParam_OutputFlag, verbose);
+        env.set(GRB_IntParam_OutputFlag, params.verbose);
         env.start();
 
         GRBModel model(env);
         
-        model.set(GRB_DoubleParam_TimeLimit, 7200.0);
-        model.set(GRB_DoubleParam_SoftMemLimit, 13.0);
-        model.set(GRB_DoubleParam_MemLimit, 13.5);
+        model.set(GRB_DoubleParam_TimeLimit, params.time_limit);
+        model.set(GRB_DoubleParam_SoftMemLimit, params.soft_mem_limit);
+        model.set(GRB_DoubleParam_MemLimit, params.mem_limit);
 
         vector<vector<GRBVar>> vars_x(num_vertices, vector<GRBVar>(B));
         vector<vector<GRBVar>> vars_y(num_vertices, vector<GRBVar>(B));
@@ -321,69 +318,10 @@ void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_se
                 for(int u = 0; u < num_vertices; u++) {
                     if(vars_x[u][i].get(GRB_DoubleAttr_X) > 0.5) {
                         burning_sequence.push_back(u);
-                        // u = num_vertices;
                     }
-                    
-                    // cout << vars_x[u][i].get(GRB_StringAttr_VarName) << ": " << (1 ? vars_x[u][i].get(GRB_DoubleAttr_X) > 0.5 : 0) << endl;
-                    // cout << vars_y[u][i].get(GRB_StringAttr_VarName) << ": " << (1 ? vars_y[u][i].get(GRB_DoubleAttr_X) > 0.5 : 0);
-                    
-                    // double sum = 0;
-
-                    // for (int j = 0; j <= i; j++) {
-                    //     sum += vars_x[u][j].get(GRB_DoubleAttr_X);
-                    // }
-
-                    // s = 0;
-                    // for (auto comb : combs) {
-                    //     auto depth = generate_covering_tree(g, r, comb);
-                        
-                    //     if (depth[u] - 1 >= 0) {
-                    //         s++;
-                    //         continue; 
-                    //     }
-
-                    //     for (int j = 0; j < i; j++) {
-                    //         if (depth[u]-1 < i-j) {
-                    //             sum += vars_f[s][j].get(GRB_DoubleAttr_X);
-                    //             if (vars_f[s][j].get(GRB_DoubleAttr_X) > 0.5) {
-                    //                 cout << "(";
-                    //                 for (auto v : comb)
-                    //                     cout << v << " ";
-                    //                 cout << ")";
-                    //             }
-                    //         }
-                    //     }
-                    //     s++;
-                    // }
-                    // cout << " " << sum << endl;
                     
                 }
             }
-
-            if (!burning_sequence.empty()) {
-                Vertex unburned;
-                if (!ggbp::utils::is_burning_sequence(g, r, burning_sequence, unburned))
-                    cout << "Solution is not burning sequence" << endl;
-            }
-
-            // unsigned long long s = 0;
-            // for (auto comb : combs) {
-            //     for (int i = 0; i < B; i++) {
-            //         if (vars_f[s][i].get(GRB_DoubleAttr_X) > 0.5) {
-            //             cout << vars_f[s][i].get(GRB_StringAttr_VarName) << ": 1 (";
-
-            //             for (auto u : comb)
-            //                 cout << u << " ";
-            //             cout << ")" << endl;
-            //         }
-            //         double sum = 0;
-            //         for (auto u : s) {
-            //             sum += vars_y[u][j].get(GRB_DoubleAttr_X);
-            //         cout << " " << sum << endl;
-            //         }
-            //     }
-            //     s++;
-            // }
         }
     } catch (GRBException e) {
         
@@ -392,50 +330,35 @@ void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_se
     }
 }
 
-int get_lower_bound(Graph const &g, int const r) {
-    int count = 0;
-    
-    for (auto u = 0; u < g.order(); u++) {
-        if (g.degree(u) < r)
-            count++;
-    }
-
-    return 0;
-}
-
-int get_upper_bound(Graph const &g, int const r) {
-    // return g.order();
-    return 15;
-}
-
-void find_burning_sequence(Graph const &g, int const r, vector<int> &burning_sequence, bool verbose) {
+void find_burning_sequence(Graph const &g, int LB, int UB, int const r, vector<int> &burning_sequence, ggbp::ilp::GurobiParams params) {
     PRECONDITION(r >= 1);
     PRECONDITION(G.order() >= r);
 
-    int LB = get_lower_bound(g, r);
-    int UB = get_upper_bound(g, r);
     vector<int> temp_burning_sequence;
 
-    int iteration = 0;
+    int iteration = 1;
     while(LB <= UB) {
         int B = (UB + LB)/2;
 
-        if (1) {
+        if (params.verbose) {
             cout << "Iteration #" << iteration << endl;
             cout << "Current lower bound = " << LB << endl;
             cout << "Current upper bound = " << UB << endl;
             cout << "Trying to find a burning sequence of length " << B << "." << endl;
         }
 
-        solve_ilp(g, r, B, temp_burning_sequence, verbose);
+        solve_ilp(g, r, B, temp_burning_sequence, params);
+
+        int turns = ggbp::utils::burning_turns(g, r, temp_burning_sequence);
+        temp_burning_sequence.resize(turns);
 
         if(int(temp_burning_sequence.size()) == 0) {
-            if (1) {
+            if (params.verbose) {
                 cout << "There is no burning sequence of length " << B << "." << endl << endl;
             }
             LB = B+1;
         } else {
-            if (1) {
+            if (params.verbose) {
                 cout << "A burning sequence of length " << B << " was found." << endl << endl;
             }
             UB = B;

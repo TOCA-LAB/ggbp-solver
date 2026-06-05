@@ -73,6 +73,14 @@ int main(int argc, char* argv[]) {
         .help("Define the timeout for the LP solver")
         .flag()
         .store_into(params.active_neighborhood);
+
+    program.add_argument("-lb", "--lower-bound")
+        .help("Define the lower bound for this instance")
+        .scan<'i', int>();
+
+    program.add_argument("-ub", "--upper-bound")
+        .help("Define the upper bound for this instance")
+        .scan<'i', int>();
     
     try {
         program.parse_args(argc, argv);
@@ -112,11 +120,23 @@ int main(int argc, char* argv[]) {
     ggbp::ilp::GurobiErrorInfo err_info;
     err_info.msg = "";
     
-    if (params.opt) {
-        int B = ggbp::ilp::naive::get_upper_bound(graph, r, params.verbose);
-        ggbp::ilp::naive::solve_ilp(graph, r, B, burning_sequence, err_info, params);
+    int UB, LB;
+    if (program.is_used("-lb")) {
+        LB = program.get<int>("-lb");
     } else {
-        ggbp::ilp::naive::find_burning_sequence(graph, r, burning_sequence, params);
+        LB = ggbp::ilp::get_lower_bound(graph, r, params.verbose);
+    }
+
+    if (program.is_used("-ub")) {
+        UB = program.get<int>("-ub");
+    } else {
+        UB = ggbp::ilp::get_upper_bound(graph, r, params.verbose);
+    }
+
+    if (params.opt) {
+        ggbp::ilp::naive::solve_ilp(graph, r, UB, burning_sequence, err_info, params);
+    } else {
+        ggbp::ilp::naive::find_burning_sequence(graph, r, LB, UB, burning_sequence, params);
     }
 
 
