@@ -85,7 +85,7 @@ private:
     AdjList adj_;
 
     void check_vertex(Vertex v) const {
-        if (v > nvertices_)
+        if (v < 0 or v >= nvertices_)
             throw std::out_of_range("Vertex index out of range");
     }
 };
