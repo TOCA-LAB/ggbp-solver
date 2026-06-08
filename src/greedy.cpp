@@ -148,7 +148,7 @@ bool is_burning_sequence(const Graph& G, int r, vector<Vertex> burning_sequence)
     }
 
     for (Vertex u : G.vertices())
-        if (nburned_neighbors[u] ==  -1)
+        if (burned_round[u] == -1)
             return false;
     return true;
 }
