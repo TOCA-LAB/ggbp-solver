@@ -15,7 +15,9 @@ void Graph::add_edge(Vertex u, Vertex v) {
     check_vertex(u);
     check_vertex(v);
 
-    // unordered_set prevents duplicates automatically
+    if (has_edge(u, v))
+        return;
+
     adj_[u].push_back(v);
     adj_[v].push_back(u);
 
