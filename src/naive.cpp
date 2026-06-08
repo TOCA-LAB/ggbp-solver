@@ -11,11 +11,13 @@
 namespace ggbp::ilp {
 using namespace std;
 
-int ggbp::ilp::get_lower_bound(Graph const &g, int const r, bool verbose) {
+int get_lower_bound(Graph const &g, int const r, bool verbose) {
+    (void) verbose;
     int count = 0;
+    auto const threshold = r <= 0 ? Graph::size_type{0} : static_cast<Graph::size_type>(r);
     
-    for (auto u = 0; u < g.order(); u++) {
-        if (g.degree(u) < r)
+    for (Graph::size_type u = 0; u < g.order(); u++) {
+        if (g.degree(u) < threshold)
             count++;
     }
 
