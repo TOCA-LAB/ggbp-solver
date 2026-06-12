@@ -21,6 +21,21 @@ find_package(GUROBI REQUIRED)
 find_package(Boost REQUIRED CONFIG)
 find_package(OpenMP REQUIRED)
 
+include(FetchContent)
+
+FetchContent_Declare(
+    json
+    URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+)
+FetchContent_MakeAvailable(json)
+
+FetchContent_Declare(
+    argparse
+    GIT_REPOSITORY https://github.com/p-ranav/argparse.git
+    GIT_TAG v3.2
+)
+FetchContent_MakeAvailable(argparse)
+
 add_subdirectory(src)
 add_subdirectory(app)
 

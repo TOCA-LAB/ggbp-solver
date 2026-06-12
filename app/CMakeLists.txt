@@ -1,3 +1,5 @@
+link_libraries(nlohmann_json::nlohmann_json argparse)
+
 add_executable(cover cover.cpp)
 target_link_libraries(cover PRIVATE ggbp)
 
