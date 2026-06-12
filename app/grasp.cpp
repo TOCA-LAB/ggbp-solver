@@ -3,14 +3,15 @@
 #include <random>
 #include <string>
 #include <fstream>
-#include "argparse/argparse.hpp"
+#include <argparse/argparse.hpp>
+#include <nlohmann/json.hpp>
 #include "ggbp/ggbp.hpp"
 #include "ggbp/graph.hpp"
-
 #include "utils/utils.hpp"
 
 using std::vector;
 using std::cout, std::endl;
+using json = nlohmann::json;
 
 int main(int argc, char* argv[]) {
     using std::chrono::high_resolution_clock;
@@ -18,10 +19,6 @@ int main(int argc, char* argv[]) {
     using std::chrono::seconds;
 
     argparse::ArgumentParser program("GGBP-GRASP");
-
-    std::string format;
-    program.add_argument("format")
-        .store_into(format);
 
     std::string graph_file_path;
     program.add_argument("file_path")
@@ -33,6 +30,13 @@ int main(int argc, char* argv[]) {
         .required()
         .store_into(r);
     
+    std::string format;
+    program.add_argument("--format")
+        .help("Set the format for the instance. Choices: {mtx, g6}")
+        .default_value(std::string{"mtx"})
+        .choices("mtx", "g6")
+        .store_into(format);
+
     int T;
     program.add_argument("-T", "--iter")
         .help("Define the number of iterations of GRASP")
@@ -47,8 +51,8 @@ int main(int argc, char* argv[]) {
         .help("Define seed for the RNG")
         .scan<'u', unsigned>();
 
-    program.add_argument("-o", "--out-file")
-        .help("Choose the output file");
+    program.add_argument("--json")
+        .help("Choose the output json file");
 
         
     try {
@@ -110,33 +114,27 @@ int main(int argc, char* argv[]) {
         std::cout << *i+1 << ","; // adding 1 to match the original vertex index 
     std::cout << "]" << std::endl;
 
-    if (program.present("-o")) {
-        std::ofstream out_file(program.get("-o"));
+    if (program.present("--json")) {
+        std::ofstream out_file(program.get("--json"));
         
         if (!out_file) {
             cout << "Arquivo de saída inválido" << endl;
             
             return 1;
         }
-
-        out_file << graph_name << "\n"
-                 << graph.order() << " " << graph.size() << "\n\n"
-                 << "r=" << r << endl
-                 << seed << endl
-                 << "Iters: " << T << "\n\n";
         
-        out_file << burning_sequence.size() << endl;
+        json j;
 
-        for (auto u : burning_sequence)
-            out_file << u << ", ";
-        out_file << "\n\n";
+        j["instance"] = graph_name;
+        j["order"] = graph.order();
+        j["size"] = graph.size();
+        j["burning_number"] = burning_sequence.size();
+        j["burning_sequence"] = burning_sequence;
+        j["execution_time"] = ms_double.count()/1000;
+        j["iters"] = iters;
+        j["first_best"] = first_best;
 
-        out_file << ms_double.count()/1000 << "\n\n";
-
-        out_file << first_best << endl;
-        for (auto i : iters)
-            out_file << i << ", ";
-        out_file << "\n\n";
+        out_file << std::setw(4) << j << endl;
     }
     
     return 0;
