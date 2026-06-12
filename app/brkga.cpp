@@ -2,14 +2,16 @@
 #include <chrono>
 #include <string>
 #include <fstream>
-#include "argparse/argparse.hpp"
-#include "ggbp/ggbp.hpp"
-#include "ggbp/graph.hpp"
+#include <argparse/argparse.hpp>
+#include <nlohmann/json.hpp>
 #include "brkga-lib/MTRand.h"
 #include "brkga-lib/BRKGA.h"
+#include "ggbp/ggbp.hpp"
+#include "ggbp/graph.hpp"
 
 using std::vector;
 using std::cout, std::endl;
+using json = nlohmann::json;
 
 int main(int argc, char* argv[]) {
     using std::chrono::high_resolution_clock;
@@ -18,10 +20,6 @@ int main(int argc, char* argv[]) {
 
     argparse::ArgumentParser program("GGBP-BRKGA");
 
-    std::string format;
-    program.add_argument("format")
-        .store_into(format);
-
     program.add_argument("file_path");
     
     int r;
@@ -29,6 +27,13 @@ int main(int argc, char* argv[]) {
         .help("Define the r constant for the GGBP")
         .required()
         .store_into(r);
+
+    std::string format;
+    program.add_argument("--format")
+        .help("Set the format for the instance. Choices: {mtx, g6}")
+        .default_value(std::string{"mtx"})
+        .choices("mtx", "g6")
+        .store_into(format);
 
     program.add_argument("-V", "--verbose")
         .help("Increase output verbosity")
@@ -84,8 +89,8 @@ int main(int argc, char* argv[]) {
     program.add_argument("-S", "--seed")
         .help("Define seed for the RNG");
 
-    program.add_argument("-o", "--out-file")
-        .help("Choose the output file");
+    program.add_argument("--json")
+        .help("Choose the output json file");
         
     try {
         program.parse_args(argc, argv);
@@ -110,6 +115,7 @@ int main(int argc, char* argv[]) {
         graph = Graph(g6_string);
     } else {
         cout << "Invalid graph format" << endl;
+        return 1;
     }
     
     std::string::iterator ptr, end_ptr;
@@ -178,39 +184,28 @@ int main(int argc, char* argv[]) {
     cout << algorithm.getBestFitness() << endl
          << ms_double.count()/1000 << endl;
 
-    if (program.present("-o")) {
-        std::ofstream out_file(program.get("-o"));
+
+    if (program.present("--json")) {
+        std::ofstream out_file(program.get("--json"));
         
         if (!out_file) {
             cout << "Arquivo de saída inválido" << endl;
             
             return 1;
         }
-
-        out_file << graph_name << "\n"
-                 << graph.order() << " " << graph.size() << "\n\n"
-                 << "r=" << r << endl
-                 << rngSeed << endl
-                 << "p=" << p << endl
-                 << "gens=" << MAX_GENS << endl
-                 << "pe=" << pe << endl
-                 << "pm=" << pm << endl
-                 << "rhoe=" << rhoe << endl
-                 << "K=" << K << endl
-                 << "MAXT=" << MAXT << "\n\n";
         
-        out_file << burning_sequence.size() << endl;
+        json j;
 
-        for (auto u : burning_sequence)
-            out_file << u << ", ";
-        out_file << "\n\n";
+        j["instance"] = graph_name;
+        j["order"] = graph.order();
+        j["size"] = graph.size();
+        j["burning_number"] = algorithm.getBestFitness();
+        j["burning_sequence"] = burning_sequence;
+        j["execution_time"] = ms_double.count()/1000;
+        j["iters"] = iters;
+        j["first_best"] = first_best;
 
-        out_file << ms_double.count()/1000 << "\n\n";
-
-        out_file << first_best << endl;
-        for (auto i : iters)
-            out_file << i << ", ";
-        out_file << "\n\n";
+        out_file << std::setw(4) << j << endl;
     }
 
     return 0;
