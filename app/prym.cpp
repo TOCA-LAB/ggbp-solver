@@ -2,12 +2,16 @@
 #include <chrono>
 #include <string>
 #include <fstream>
-#include "argparse/argparse.hpp"
+#include <filesystem>
+#include <argparse/argparse.hpp>
+#include <nlohmann/json.hpp>
 #include "ggbp/graph.hpp"
 #include "ggbp/ggbp.hpp"
 
 using std::vector;
 using std::cout, std::endl;
+namespace fs = std::filesystem;
+using json = nlohmann::json;
 
 int main(int argc, char* argv[]) {
     using std::chrono::high_resolution_clock;
@@ -15,18 +19,21 @@ int main(int argc, char* argv[]) {
     using std::chrono::seconds;
 
     argparse::ArgumentParser program("GBP-PRYM");
-
-    std::string format;
-    program.add_argument("format")
-        .store_into(format);
         
     std::string graph_file_path;
     program.add_argument("file_path")
         .store_into(graph_file_path);
 
+    std::string format;
+    program.add_argument("--format")
+        .help("Set the format for the instance. Choices: {mtx, g6}")
+        .default_value(std::string{"mtx"})
+        .choices("mtx", "g6")
+        .store_into(format);
+
     program.add_argument("-V", "--verbose")
         .help("Increase output verbosity")
-          .flag();
+        .flag();
 
     program.add_argument("-d", "--debug")
         .help("Choose to run only some functions")
@@ -60,19 +67,14 @@ int main(int argc, char* argv[]) {
         cout << "Invalid graph format" << endl;
     }
 
-
-    std::string::iterator ptr, end_ptr;
-    for (ptr = graph_file_path.end(); *ptr != '/'; --ptr) {
-        if (*ptr == '.')
-            end_ptr = ptr;
-    }
-    std::string graph_name(ptr+1, end_ptr);
+    std::string graph_name = fs::path(graph_file_path).stem();
 
     int grb_verbose = 0;
     if (program["--verbose"] == true) {
         std::cout << graph_name << ": " << graph.order() << " " << graph.size() << std::endl;
         grb_verbose = 1;
     }
+    
     vector<int> burning_sequence;
     ggbp::ilp::prym::run_prym(graph, burning_sequence);
 
@@ -87,21 +89,24 @@ int main(int argc, char* argv[]) {
         std::cout << *i+1 << ","; // adding 1 to match the original vertex index 
     std::cout << "]" << std::endl;
 
-    if (program.present("-o")) {
-        std::ofstream out_file(program.get("-o"));
+    if (program.present("--json")) {
+        std::ofstream out_file(program.get("--json"));
         
-        if (!out_file)
+        if (!out_file) {
             cout << "Arquivo de saída inválido" << endl;
+            
+            return 1;
+        }
         
-        out_file << graph_name << "\n"
-                 << graph.order() << " " << graph.size() << "\n\n";
+        json j;
 
-        out_file << burning_sequence.size() << endl;
-        for (auto u : burning_sequence)
-            out_file << u << ", ";
-        out_file << "\n\n";
+        j["instance"] = graph_name;
+        j["order"] = graph.order();
+        j["size"] = graph.size();
+        j["burning_number"] = burning_sequence.size();
+        j["burning_sequence"] = burning_sequence;
 
-        out_file << ms_double.count()/1000 << endl ;
+        out_file << std::setw(4) << j << endl;
     }
 
     return 0;

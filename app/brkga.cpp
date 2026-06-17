@@ -2,6 +2,7 @@
 #include <chrono>
 #include <string>
 #include <fstream>
+#include <filesystem>
 #include <argparse/argparse.hpp>
 #include <nlohmann/json.hpp>
 #include "brkga-lib/MTRand.h"
@@ -11,13 +12,14 @@
 
 using std::vector;
 using std::cout, std::endl;
+namespace fs = std::filesystem;
 using json = nlohmann::json;
 
-int main(int argc, char* argv[]) {
-    using std::chrono::high_resolution_clock;
-    using std::chrono::duration;
-    using std::chrono::seconds;
+using std::chrono::high_resolution_clock;
+using std::chrono::duration;
+using std::chrono::seconds;
 
+int main(int argc, char* argv[]) {
     argparse::ArgumentParser program("GGBP-BRKGA");
 
     program.add_argument("file_path");
@@ -118,12 +120,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     
-    std::string::iterator ptr, end_ptr;
-    for (ptr = graph_file_path.end(); *ptr != '/' && *ptr != '\\'; --ptr) {
-        if (*ptr == '.')
-            end_ptr = ptr;
-    }
-    std::string graph_name(ptr+1, end_ptr);
+    std::string graph_name = fs::path(graph_file_path).stem();
 
     const unsigned n = graph.order();                   // size of chromosomes
     const unsigned p = program.get<unsigned>("-p");     // size of population

@@ -2,23 +2,23 @@
 #include <chrono>
 #include <string>
 #include <fstream>
-#include "argparse/argparse.hpp"
+#include <filesystem>
+#include <argparse/argparse.hpp>
+#include <nlohmann/json.hpp>
 #include "ggbp/graph.hpp"
 #include "ggbp/ggbp.hpp"
 
 using std::vector;
 using std::cout, std::endl;
+namespace fs = std::filesystem;
+using json = nlohmann::json;
+
+using std::chrono::high_resolution_clock;
+using std::chrono::duration;
+using std::chrono::seconds;
 
 int main(int argc, char* argv[]) {
-    using std::chrono::high_resolution_clock;
-    using std::chrono::duration;
-    using std::chrono::seconds;
-
     argparse::ArgumentParser program("GGBP-Naive");
-
-    std::string format;
-    program.add_argument("format")
-        .store_into(format);
 
     std::string graph_file_path;
     program.add_argument("file_path")
@@ -29,6 +29,13 @@ int main(int argc, char* argv[]) {
         .help("Define the r constant for the GGBP")
         .required()
         .store_into(r);
+
+    std::string format;
+    program.add_argument("--format")
+        .help("Set the format for the instance. Choices: {mtx, g6}")
+        .default_value(std::string{"mtx"})
+        .choices("mtx", "g6")
+        .store_into(format);
 
     program.add_argument("-o", "--out-file")
         .help("Choose the output file");
@@ -105,12 +112,7 @@ int main(int argc, char* argv[]) {
         cout << "Invalid graph format" << endl;
     }
 
-    std::string::iterator ptr, end_ptr;
-    for (ptr = graph_file_path.end(); (*ptr != '/') && (*ptr != '\\'); --ptr) {
-        if (*ptr == '.')
-            end_ptr = ptr;
-    }
-    std::string graph_name(ptr+1, end_ptr);
+    std::string graph_name = fs::path(graph_file_path).stem();
 
     if (params.verbose) {
         cout << graph_name << ": " << graph.order() << " " << graph.size() << endl;
@@ -160,22 +162,24 @@ int main(int argc, char* argv[]) {
 
     cout << ms_double.count()/1000 << " " + err_info.msg << endl;
 
-    if (program.present("-o")) {
-        std::ofstream out_file(program.get("-o"));
+    if (program.present("--json")) {
+        std::ofstream out_file(program.get("--json"));
         
-        if (!out_file)
+        if (!out_file) {
             cout << "Arquivo de saída inválido" << endl;
-        
-        out_file << graph_name << "; "
-                 << graph.order() << "; "<< graph.size() << "; ";
-
-        if (err_info.msg == "") {
-            out_file << burning_sequence.size() << "; ";
-        } else {
-            out_file << err_info.ObjBound << "; " << err_info.ObjVal << "; --; ";
+            
+            return 1;
         }
+        
+        json j;
 
-        out_file << ms_double.count()/1000 << " " + err_info.msg << endl ;
+        j["instance"] = "graph_name";
+        j["order"] = graph.order();
+        j["size"] = graph.size();
+        j["burning_number"] = burning_sequence.size();
+        j["burning_sequence"] = burning_sequence;
+
+        out_file << std::setw(4) << j << endl;
     }
 
     // for (auto i = burning_sequence.begin(); i < burning_sequence.end(); ++i)

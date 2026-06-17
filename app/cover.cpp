@@ -1,19 +1,28 @@
-#include "argparse/argparse.hpp"
 
 #include <iostream>
 #include <string>
-
+#include <fstream>
+#include <filesystem>
+#include <argparse/argparse.hpp>
+#include <nlohmann/json.hpp>
 #include "ggbp/ggbp.hpp"
 #include "ggbp/graph.hpp"
 #include "utils/combinations.hpp"
 
 
-using namespace std;
+using std::vector;
+using std::cout, std::endl;
+namespace fs = std::filesystem;
+using json = nlohmann::json;
+
+using std::chrono::high_resolution_clock;
+using std::chrono::duration;
+using std::chrono::seconds;
 
 int main(int argc, char *argv[]) {
     argparse::ArgumentParser program("GGBP-Cover");
 
-    string graph_file_path;
+    std::string graph_file_path;
     program.add_argument("file_path")
         .store_into(graph_file_path);
     
@@ -23,8 +32,12 @@ int main(int argc, char *argv[]) {
         .required()
         .store_into(r);
 
-    program.add_argument("-o", "--out-file")
-        .help("Choose the output file");
+    std::string format;
+    program.add_argument("--format")
+        .help("Set the format for the instance. Choices: {mtx, g6}")
+        .default_value(std::string{"mtx"})
+        .choices("mtx", "g6")
+        .store_into(format);
 
     ggbp::ilp::GurobiParams params;
        program.add_argument("-V", "--verbose")
@@ -55,6 +68,9 @@ int main(int argc, char *argv[]) {
         .help("Define the upper bound for this instance")
         .scan<'i', int>();
     
+    program.add_argument("--json")
+        .help("Choose the output json file");
+        
     try {
         program.parse_args(argc, argv);
     }
@@ -64,30 +80,61 @@ int main(int argc, char *argv[]) {
         std::exit(1);
     }
     
-    Graph g = Graph::from_mtx_file(graph_file_path);
+    Graph graph;
+    
+    if (format == "mtx") {
+        graph = Graph::from_mtx_file(graph_file_path);
+    } else if (format == "g6") {
+        std::ifstream g6_file(graph_file_path);
+        std::string g6_string {std::istreambuf_iterator<char>(g6_file), std::istreambuf_iterator<char>() };
+        graph = Graph(g6_string);
+    } else {
+        cout << "Invalid graph format" << endl;
+    }
+
+    std::string graph_name = fs::path(graph_file_path).stem();
 
     int UB, LB;
     if (program.is_used("-lb")) {
         LB = program.get<int>("-lb");
     } else {
-        LB = ggbp::ilp::get_lower_bound(g, r, params.verbose);
+        LB = ggbp::ilp::get_lower_bound(graph, r, params.verbose);
     }
 
     if (program.is_used("-ub")) {
         UB = program.get<int>("-ub");
     } else {
-        UB = ggbp::ilp::get_upper_bound(g, r, params.verbose);
+        UB = ggbp::ilp::get_upper_bound(graph, r, params.verbose);
     }
 
     vector<Vertex> burning_sequence;
     
-    ggbp::ilp::cover::find_burning_sequence(g, r, UB, LB, burning_sequence, params);
+    ggbp::ilp::cover::find_burning_sequence(graph, r, UB, LB, burning_sequence, params);
 
     cout << "Burning Sequence: ";
     for (auto u : burning_sequence)
         cout << u + 1 << " ";
     cout << endl;
 
-    
+    if (program.present("--json")) {
+        std::ofstream out_file(program.get("--json"));
+        
+        if (!out_file) {
+            cout << "Arquivo de saída inválido" << endl;
+            
+            return 1;
+        }
+        
+        json j;
+
+        j["instance"] = graph_name;
+        j["order"] = graph.order();
+        j["size"] = graph.size();
+        j["burning_number"] = burning_sequence.size();
+        j["burning_sequence"] = burning_sequence;
+
+        out_file << std::setw(4) << j << endl;
+    }
+
     return 0;
 }
