@@ -1,8 +1,6 @@
 #include <cmath>
 #include "gurobi_c++.h"
 #include "utils/contract.hpp"
-#include "brkga-lib/MTRand.h"
-#include "brkga-lib/BRKGA.h"
 #include "ggbp/graph.hpp"
 #include "utils/utils.hpp"
 
@@ -24,38 +22,26 @@ int get_lower_bound(Graph const &g, int const r, bool verbose) {
     return count;
 }
 
-int get_upper_bound(Graph const &g, int const r, bool verbose) {
-    const unsigned n = g.order();
-    const unsigned p = 60;
-    const unsigned MAX_GENS = 25;
-    const double pe = 0.20;
-    const double pm = 0.10;
-    const double rhoe = 0.70;	
-    const unsigned K = 2;
-    const unsigned MAXT = 2;
+int get_upper_bound(Graph const &graph, int const r, bool verbose) {
+    ggbp::brkga::BRKGAParams params;
+    
+    params.n = graph.order();
+    params.p = 60;
+    params.MAX_GENS = 25;
+    params.pe = 0.20;
+    params.pm = 0.10;
+    params.rhoe = 0.70;	
+    params.K = 2;
+    params.MAXT = 2;
+    params.verbose = verbose;
 
-    ggbp::brkga::Decoder decoder(g, r);
+    vector<int> burning_sequence, iters;
+    int first_best;
 
-    const long unsigned rngSeed = 0;
-    MTRand rng(rngSeed);
+    ggbp::brkga::brkga(graph, r, params, burning_sequence, iters, first_best);
 
-    BRKGA< ggbp::brkga::Decoder, MTRand > algorithm(n, p, pe, pm, rhoe, decoder, rng, K, MAXT);
-    unsigned generation = 0;
-    const unsigned X_INTVL = 10;
-    const unsigned X_NUMBER = 2;
-    do {
-        algorithm.evolve();	// evolve the population for one generation
-        if (verbose) {
-            std::cout << "Generation " << generation << " best solution found has objective value = "
-                    << algorithm.getBestFitness() << std::endl;
-        }
 
-        if((++generation) % X_INTVL == 0) {
-            algorithm.exchangeElite(X_NUMBER);	// exchange top individuals
-        }
-    } while (generation < MAX_GENS);
-
-    return algorithm.getBestFitness();
+    return burning_sequence.size();
 }
 }
 

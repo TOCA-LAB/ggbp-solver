@@ -5,8 +5,6 @@
 #include <filesystem>
 #include <argparse/argparse.hpp>
 #include <nlohmann/json.hpp>
-#include "brkga-lib/MTRand.h"
-#include "brkga-lib/BRKGA.h"
 #include "ggbp/ggbp.hpp"
 #include "ggbp/graph.hpp"
 
@@ -46,47 +44,48 @@ int main(int argc, char* argv[]) {
         .default_value("normal")
         .required();
 
+    ggbp::brkga::BRKGAParams params;
     program.add_argument("-p", "--pop")
         .help("Define the size of each population")
         .default_value(100U)
         .required()
-        .scan<'u', unsigned>();
+        .store_into(params.p);
     
     program.add_argument("-G", "--gens")
         .help("Define the number of generations")
         .default_value(100U)
         .required()
-        .scan<'u', unsigned>();
+        .store_into(params.MAX_GENS);
     
     program.add_argument("-e", "--elite")
         .help("Define the fraction of population to be the elite-set")
         .default_value(0.20)
         .required()
-        .scan<'f', double>();
+        .store_into(params.pe);
     
     program.add_argument("-m", "--mutant")
         .help("Define the fraction of population to be replaced by mutants")
         .default_value(0.10)
         .required()
-        .scan<'f', double>();
+        .store_into(params.pm);
 
     program.add_argument("-r", "--rhoe")
         .help("Define the probability that offspring inherit an allele from elite parent")
         .default_value(0.70)
         .required()
-        .scan<'f', double>();
+        .store_into(params.rhoe);
 
     program.add_argument("-K", "--n_pops")
         .help("Define the number of independent populations")
         .default_value(2U)
         .required()
-        .scan<'u', unsigned>();
+        .store_into(params.K);
     
     program.add_argument("-T", "--MAXT")
         .help("Define the number of threads for parallel decoding")
         .default_value(4U)
         .required()
-        .scan<'u', unsigned>();
+        .store_into(params.MAXT);
     
     program.add_argument("-S", "--seed")
         .help("Define seed for the RNG");
@@ -122,64 +121,22 @@ int main(int argc, char* argv[]) {
     
     std::string graph_name = fs::path(graph_file_path).stem();
 
-    const unsigned n = graph.order();                   // size of chromosomes
-    const unsigned p = program.get<unsigned>("-p");     // size of population
-    const double pe = program.get<double>("-e");        // fraction of population to be the elite-set
-    const double pm = program.get<double>("-m");        // fraction of population to be replaced by mutants
-    const double rhoe = program.get<double>("-r");      // probability that offspring inherit an allele from elite parent
-    const unsigned K = program.get<unsigned>("-K");     // number of independent populations
-    const unsigned MAXT = program.get<unsigned>("-T");  // number of threads for parallel decoding
+    vector<int> burning_sequence, iters;
+    int first_best;
 
-    ggbp::brkga::Decoder decoder(graph, r);	// initialize the decoder
+    ggbp::brkga::brkga(graph, r, params, burning_sequence, iters, first_best);
 
-    // seed to the random number generator
-    const long unsigned rngSeed = std::chrono::system_clock::now().time_since_epoch().count();
-    
-    // initialize the random number generator
-    MTRand rng(rngSeed);
-    
-    // initialize the BRKGA-based heuristic
-    BRKGA< ggbp::brkga::Decoder, MTRand > algorithm(n, p, pe, pm, rhoe, decoder, rng, K, MAXT);
-    
-    unsigned generation = 0;                                // current generation
-    const unsigned X_INTVL = 10;                            // exchange best individuals at every 100 generations
-    const unsigned X_NUMBER = 2;                            // exchange top 2 best
-    const unsigned MAX_GENS = program.get<unsigned>("-G");  // run for 1000 gens
-
-    vector<int> iters;
-    iters.reserve(MAX_GENS);
-
-    unsigned best = graph.order();
-    unsigned first_best = 0;
-    
-    do {
-        algorithm.evolve();	// evolve the population for one generation
-        int fitness = algorithm.getBestFitness();
-        
-        if (program["--verbose"] == true) {
-            cout << "Generation " << generation << " best solution found has objective value = "
-                 << fitness << endl;
-        }
-
-        iters.push_back(fitness);
-
-        if (fitness < best) {
-            best = fitness;
-            first_best = generation;
-        }
-
-        if((++generation) % X_INTVL == 0) {
-            algorithm.exchangeElite(X_NUMBER);	// exchange top individuals
-        }
-    } while (generation < MAX_GENS && duration<double, std::milli>(high_resolution_clock::now() - t1).count()/1000 < 7200);
-    
-    vector<int> burning_sequence(decoder.getBurningSequence(algorithm.getBestChromosome()));
 
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;
 
-    cout << algorithm.getBestFitness() << endl
-         << ms_double.count()/1000 << endl;
+    cout << "b(G) = " << burning_sequence.size() << endl
+         << "runtime = " << ms_double.count() / 1000 << endl;
+
+    cout << "burning Sequence = ";
+    for (auto u : burning_sequence)
+        cout << u + 1 << " ";
+    cout << endl;
 
 
     if (program.present("--json")) {
@@ -196,7 +153,7 @@ int main(int argc, char* argv[]) {
         j["instance"] = graph_name;
         j["order"] = graph.order();
         j["size"] = graph.size();
-        j["burning_number"] = algorithm.getBestFitness();
+        j["burning_number"] = burning_sequence.size();
         j["burning_sequence"] = burning_sequence;
         j["execution_time"] = ms_double.count()/1000;
         j["iters"] = iters;

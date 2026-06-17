@@ -3,6 +3,8 @@
 #include <queue>
 #include <algorithm>
 #include <cmath>
+#include "brkga-lib/MTRand.h"
+#include "brkga-lib/BRKGA.h"
 #include "ggbp/graph.hpp"
 #include "utils/utils.hpp"
 
@@ -19,7 +21,7 @@ Decoder::Decoder(Graph const &g, int const _r) : graph(g) {
 
 Decoder::~Decoder() { }
 
-vector<pair<int, double>> indexedChromossome(const vector<double>& v)
+vector<pair<int, double>> index_chromossome(const vector<double>& v)
 {
     vector<pair<int, double>> indexed_chromossome(v.size());
     for (unsigned i = 0; i < v.size(); ++i)
@@ -34,7 +36,7 @@ tuple<int, vector<int>> Decoder::decoder(const vector< double >& chromosome) con
     vector<int> burning_sequence, to_burn;
     vector<int> burned(num_vertices, 0);
     vector<int> num_burning_neighbors(num_vertices, 0);
-    vector<pair<int, double>> indexed_chromossome = indexedChromossome(chromosome);
+    vector<pair<int, double>> indexed_chromossome = index_chromossome(chromosome);
 
 
     function<bool (pair<int, double>, pair<int, double>)> cmp = [](pair<int, double> left, pair<int, double> right) { return (left.second < right.second); };
@@ -92,7 +94,60 @@ double Decoder::decode(const std::vector< double >& chromosome) const {
     return get<0>(decoder (chromosome));
 }
 
-vector<int> Decoder::getBurningSequence(const std::vector< double >& chromosome) const {
+vector<int> Decoder::get_burning_sequence(const std::vector< double >& chromosome) const {
     return get<1>(decoder (chromosome));
+}
+
+void brkga(Graph const &graph, const int r, BRKGAParams params, vector<int> &burning_sequence, vector<int> &iters, int &first_best) {
+    ggbp::brkga::Decoder decoder(graph, r);	// initialize the decoder
+
+    // initialize the random number generator
+    MTRand rng(params.seed);
+    
+    // initialize the BRKGA-based heuristic
+    BRKGA<ggbp::brkga::Decoder, MTRand> algorithm(
+        params.n,
+        params.p,
+        params.pe,
+        params.pm,
+        params.rhoe,
+        decoder,
+        rng,
+        params.K,
+        params.MAXT
+    );
+
+     unsigned generation = 0;                               // current generation
+    const unsigned X_INTVL = 10;                            // exchange best individuals at every 100 generations
+    const unsigned X_NUMBER = 2;                            // exchange top 2 best
+    const unsigned MAX_GENS = params.MAX_GENS;              // max number of generations
+
+    iters.reserve(MAX_GENS);
+
+    unsigned best = graph.order();
+    first_best = 0;
+    
+    do {
+        algorithm.evolve();	// evolve the population for one generation
+        int fitness = algorithm.getBestFitness();
+        
+        if (params.verbose == true) {
+            cout << "Generation " << generation << " best solution found has objective value = "
+                 << fitness << endl;
+        }
+
+        iters.push_back(fitness);
+
+        if (fitness < best) {
+            best = fitness;
+            first_best = generation;
+        }
+
+        if((++generation) % X_INTVL == 0) {
+            algorithm.exchangeElite(X_NUMBER);	// exchange top individuals
+        }
+    } while (generation < MAX_GENS);
+    
+    burning_sequence = decoder.get_burning_sequence(algorithm.getBestChromosome());
 }
 }

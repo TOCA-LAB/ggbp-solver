@@ -10,6 +10,16 @@
 
 
 namespace ggbp::brkga {
+    struct BRKGAParams {
+        unsigned n, p, MAX_GENS;
+        double pe, pm, rhoe;
+        unsigned K, MAXT;
+        unsigned seed;
+        bool verbose;
+
+        BRKGAParams() = default;
+    };
+    
     class Decoder {
     public:
 
@@ -21,7 +31,7 @@ namespace ggbp::brkga {
 
         double decode(const std::vector< double >& chromosome) const;
 
-        std::vector<int> getBurningSequence(const std::vector< double >& chromosome) const;
+        std::vector<int> get_burning_sequence(const std::vector< double >& chromosome) const;
 
     private:
 
@@ -29,6 +39,8 @@ namespace ggbp::brkga {
         Graph graph;
         int n_vertices;
     };
+
+    void brkga(Graph const &graph, const int r, BRKGAParams params, std::vector<int> &burning_sequence, std::vector<int> &iters, int &first_best);
 }
 
 namespace ggbp::grasp {
