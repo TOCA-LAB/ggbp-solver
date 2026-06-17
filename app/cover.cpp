@@ -79,6 +79,8 @@ int main(int argc, char *argv[]) {
         std::cerr << program;
         std::exit(1);
     }
+
+    auto t1 = high_resolution_clock::now();
     
     Graph graph;
     
@@ -111,7 +113,13 @@ int main(int argc, char *argv[]) {
     
     ggbp::ilp::cover::find_burning_sequence(graph, r, UB, LB, burning_sequence, params);
 
-    cout << "Burning Sequence: ";
+    auto t2 = high_resolution_clock::now();
+    duration<double, std::milli> ms_double = t2 - t1;
+
+    cout << "b(G) = " << burning_sequence.size() << endl
+         << "runtime = " << ms_double.count() / 1000 << endl;
+
+    cout << "burning Sequence = ";
     for (auto u : burning_sequence)
         cout << u + 1 << " ";
     cout << endl;
@@ -132,6 +140,7 @@ int main(int argc, char *argv[]) {
         j["size"] = graph.size();
         j["burning_number"] = burning_sequence.size();
         j["burning_sequence"] = burning_sequence;
+        j["execution_time"] = ms_double.count()/1000;
 
         out_file << std::setw(4) << j << endl;
     }
