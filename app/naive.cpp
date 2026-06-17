@@ -178,6 +178,7 @@ int main(int argc, char* argv[]) {
         j["size"] = graph.size();
         j["burning_number"] = burning_sequence.size();
         j["burning_sequence"] = burning_sequence;
+        j["execution_time"] = ms_double.count()/1000;
 
         out_file << std::setw(4) << j << endl;
     }
