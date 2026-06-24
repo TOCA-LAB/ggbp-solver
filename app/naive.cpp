@@ -137,20 +137,26 @@ int main(int argc, char* argv[]) {
 
     if (params.opt) {
         ggbp::ilp::naive::solve_ilp(graph, r, UB, burning_sequence, err_info, params);
+    
+        if (err_info.error) {
+            UB = err_info.ObjBound;
+            LB = err_info.ObjVal;
+        } else {
+            UB = burning_sequence.size();
+            LB = burning_sequence.size();
+        }
     } else {
         ggbp::ilp::naive::find_burning_sequence(graph, r, LB, UB, burning_sequence, params);
     }
-
-
+    
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;
 
     cout << graph_name << "; "
          << graph.order() << "; "<< graph.size() << "; ";
 
-    if (err_info.msg == "") {
-        cout << burning_sequence.size() << "; " << burning_sequence.size() << "; " 
-             << burning_sequence.size() << "; ";
+    if (err_info.error) {
+        cout << burning_sequence.size() << "; " ;
 
         for (auto u : burning_sequence)
             cout << u << ", ";
@@ -179,6 +185,13 @@ int main(int argc, char* argv[]) {
         j["burning_number"] = burning_sequence.size();
         j["burning_sequence"] = burning_sequence;
         j["execution_time"] = ms_double.count()/1000;
+        j["upper_bound"] = UB;
+        j["lower_bound"] = LB;
+
+        j["completed"] = !err_info.error;
+
+        if (err_info.error)
+            j["error_message"] = err_info.msg;
 
         out_file << std::setw(4) << j << endl;
     }

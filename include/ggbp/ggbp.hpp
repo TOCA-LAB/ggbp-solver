@@ -74,6 +74,7 @@ namespace ggbp::ilp {
     };
 
     struct GurobiErrorInfo {
+        bool error = false;
         double ObjVal;
         double ObjBound;
         std::string msg;

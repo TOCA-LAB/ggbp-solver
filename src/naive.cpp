@@ -10,7 +10,6 @@ namespace ggbp::ilp {
 using namespace std;
 
 int get_lower_bound(Graph const &g, int const r, bool verbose) {
-    (void) verbose;
     int count = 0;
     auto const threshold = r <= 0 ? Graph::size_type{0} : static_cast<Graph::size_type>(r);
     
@@ -224,37 +223,42 @@ void solve_ilp(Graph &g, int const r, int const B, vector<int> &burning_sequence
                 }
             }
         } else if (opt_status == GRB_TIME_LIMIT) {
+            err_info.error = true;
+            
             if (model.get(GRB_DoubleAttr_ObjVal) < B)
                 err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
             else
                 err_info.ObjVal = B;
             
             err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "//TIME LIMIT";
+            err_info.msg = "time limit";
         } else if (opt_status == GRB_MEM_LIMIT) {
+            err_info.error = true;
+
             if (model.get(GRB_DoubleAttr_ObjVal) < B)
                 err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
             else
                 err_info.ObjVal = B;
 
             err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "//OUT OF MEMORY (soft)";
+            err_info.msg = "memory limit";
         }
     } catch (GRBException e) {
         cout << "Error code = " << e.getErrorCode() << endl;
         cout << e.getMessage() << endl;
 
         if (e.getErrorCode() == GRB_ERROR_OUT_OF_MEMORY) {
+            err_info.error = true;
             err_info.ObjVal = B;
             err_info.ObjBound = 0;
-            err_info.msg = "//OUT OF MEMORY";
+            err_info.msg = "out of memory";
         }
     } catch (...) {
         cout << "Exception during optimization" << endl;
     }
 }
 
-void find_burning_sequence(Graph &g, int const r, int LB, int UB, std::vector<int> &burning_sequence, LPParams params) {
+void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams params, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info) {
     PRECONDITION(r >= 1);
     PRECONDITION(G.order() >= r);
 
@@ -276,6 +280,10 @@ void find_burning_sequence(Graph &g, int const r, int LB, int UB, std::vector<in
         err_info.msg = "";
 
         solve_ilp(g, r, B, temp_burning_sequence, err_info, params);
+
+        if (err_info.error)
+            return;
+
 
         int turns = ggbp::utils::burning_turns(g, r, temp_burning_sequence);
         temp_burning_sequence.resize(turns);
