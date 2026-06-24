@@ -94,9 +94,9 @@ namespace ggbp::ilp {
             LPParams() = default;
         };
         
-        void solve_ilp(Graph &g, int const r, int const B, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info, LPParams params);
+        void solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info);
 
-        void find_burning_sequence(Graph &g, int const r, int LB, int UB, std::vector<int> &burning_sequence, LPParams params);    
+        void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams params, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info);    
     }
     
     namespace cover {    

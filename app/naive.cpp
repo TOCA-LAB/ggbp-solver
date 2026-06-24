@@ -37,9 +37,6 @@ int main(int argc, char* argv[]) {
         .choices("mtx", "g6")
         .store_into(format);
 
-    program.add_argument("-o", "--out-file")
-        .help("Choose the output file");
-
     ggbp::ilp::naive::LPParams params;
        program.add_argument("-V", "--verbose")
         .help("Increase output verbosity")
@@ -89,6 +86,9 @@ int main(int argc, char* argv[]) {
         .help("Define the upper bound for this instance")
         .scan<'i', int>();
     
+    program.add_argument("--json")
+        .help("Choose the output json file");
+
     try {
         program.parse_args(argc, argv);
     }
@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (params.opt) {
-        ggbp::ilp::naive::solve_ilp(graph, r, UB, burning_sequence, err_info, params);
+        ggbp::ilp::naive::solve_ilp(graph, r, UB, params, burning_sequence, err_info);
     
         if (err_info.error) {
             UB = err_info.ObjBound;
@@ -146,7 +146,7 @@ int main(int argc, char* argv[]) {
             LB = burning_sequence.size();
         }
     } else {
-        ggbp::ilp::naive::find_burning_sequence(graph, r, LB, UB, burning_sequence, params);
+        ggbp::ilp::naive::find_burning_sequence(graph, r, LB, UB, params, burning_sequence, err_info);
     }
     
     auto t2 = high_resolution_clock::now();

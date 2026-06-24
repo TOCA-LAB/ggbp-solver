@@ -84,7 +84,7 @@ void add_active_neighborhood_logic(GRBModel &model, Graph const &g, vector<vecto
     }
 }
 
-void solve_ilp(Graph &g, int const r, int const B, vector<int> &burning_sequence, GurobiErrorInfo &err_info, LPParams params) {
+void solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info) {
     int const n_vertices = g.order();
 
     char vtype = GRB_BINARY;
@@ -264,8 +264,6 @@ void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams par
 
     vector<int> temp_burning_sequence;
 
-    ggbp::ilp::GurobiErrorInfo err_info;
-
     int iteration = 1;
     while(LB <= UB) {
         int B = (UB + LB)/2;
@@ -279,7 +277,7 @@ void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams par
 
         err_info.msg = "";
 
-        solve_ilp(g, r, B, temp_burning_sequence, err_info, params);
+        solve_ilp(g, r, B, params, temp_burning_sequence, err_info);
 
         if (err_info.error)
             return;
