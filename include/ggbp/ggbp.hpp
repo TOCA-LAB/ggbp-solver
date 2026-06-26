@@ -102,9 +102,9 @@ namespace ggbp::ilp {
     namespace cover {    
         std::vector<int> generate_covering_tree(Graph const &g, int const r, std::vector<int> sources);
 
-        void solve_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, ggbp::ilp::GurobiParams params);
+        void solve_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info);
 
-        void find_burning_sequence(Graph const &g, int LB, int UB, int const r, std::vector<int> &burning_sequence, ggbp::ilp::GurobiParams params);    
+        void find_burning_sequence(Graph const &g, int LB, int UB, int const r, std::vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info);
     }
     
     namespace prym {

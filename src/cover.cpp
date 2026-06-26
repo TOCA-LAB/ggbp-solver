@@ -30,13 +30,15 @@ vector<int> generate_covering_tree(Graph const &g, int const r, vector<Vertex> s
 
         auto neighbors = g.neighbors(u);
         for (Vertex v : neighbors) {
+            if (depth[v] != -1)
+                continue;
+        
             tree_neighbors[v]++;
 
-            if (tree_neighbors[v] >= r && depth[v] == -1) {
+            if (tree_neighbors[v] >= r) {
                 depth[v] = depth[u] + 1;
                 q.push(v);
             }
-            // g.remove_edge(u, v);
         }
     }
 
@@ -180,7 +182,7 @@ class LazyCovering: public GRBCallback {
     }
 };
 
-void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_sequence, ggbp::ilp::GurobiParams params) {
+void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info) {
     int num_vertices = g.order();
     vector<int> vertices = g.vertices();
 
@@ -277,7 +279,7 @@ void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_se
                     }
                     s++;
                 }
-                model.addConstr(vars_y[u][i] <= expr).set(GRB_IntAttr_Lazy, 2);
+                model.addConstr(vars_y[u][i] <= expr);
             }
         }
 
@@ -313,6 +315,7 @@ void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_se
 
         int opt_status = model.get(GRB_IntAttr_Status);
         burning_sequence.clear();
+
         if (opt_status == GRB_OPTIMAL) {
             for(int i = 0; i < B; i++) {
                 for(int u = 0; u < num_vertices; u++) {
@@ -322,15 +325,45 @@ void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_se
                     
                 }
             }
+            Vertex u;
+            cout << ggbp::utils::is_burning_sequence(g, r, burning_sequence, u) << endl;
+        } else if (opt_status == GRB_TIME_LIMIT) {
+            err_info.error = true;
+            
+            if (model.get(GRB_DoubleAttr_ObjVal) < B)
+                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
+            else
+                err_info.ObjVal = B;
+            
+            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
+            err_info.msg = "time limit";
+        } else if (opt_status == GRB_MEM_LIMIT) {
+            err_info.error = true;
+
+            if (model.get(GRB_DoubleAttr_ObjVal) < B)
+                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
+            else
+                err_info.ObjVal = B;
+
+            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
+            err_info.msg = "memory limit";
         }
     } catch (GRBException e) {
-        
+        cout << "Error code = " << e.getErrorCode() << endl;
+        cout << e.getMessage() << endl;
+
+        if (e.getErrorCode() == GRB_ERROR_OUT_OF_MEMORY) {
+            err_info.error = true;
+            err_info.ObjVal = B;
+            err_info.ObjBound = 0;
+            err_info.msg = "out of memory";
+        }
     } catch (...) {
         cout << "Exception during optimization" << endl;
     }
 }
 
-void find_burning_sequence(Graph const &g, int LB, int UB, int const r, vector<int> &burning_sequence, ggbp::ilp::GurobiParams params) {
+void find_burning_sequence(Graph const &g, int LB, int UB, int const r, vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info) {
     PRECONDITION(r >= 1);
     PRECONDITION(G.order() >= r);
 
@@ -347,7 +380,10 @@ void find_burning_sequence(Graph const &g, int LB, int UB, int const r, vector<i
             cout << "Trying to find a burning sequence of length " << B << "." << endl;
         }
 
-        solve_ilp(g, r, B, temp_burning_sequence, params);
+        solve_ilp(g, r, B, temp_burning_sequence, params, err_info);
+
+        if (err_info.error)
+            return;
 
         int turns = ggbp::utils::burning_turns(g, r, temp_burning_sequence);
         temp_burning_sequence.resize(turns);

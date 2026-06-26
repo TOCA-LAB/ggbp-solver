@@ -21,6 +21,7 @@ using std::chrono::seconds;
 
 int main(int argc, char *argv[]) {
     argparse::ArgumentParser program("GGBP-Cover");
+    program.add_description("Use the Cover ILP to determine b_r(G)");
 
     std::string graph_file_path;
     program.add_argument("file_path")
@@ -110,8 +111,9 @@ int main(int argc, char *argv[]) {
     }
 
     vector<Vertex> burning_sequence;
+    ggbp::ilp::GurobiErrorInfo err_info;
     
-    ggbp::ilp::cover::find_burning_sequence(graph, r, UB, LB, burning_sequence, params);
+    ggbp::ilp::cover::find_burning_sequence(graph, r, UB, LB, burning_sequence, params, err_info);
 
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;
@@ -141,6 +143,13 @@ int main(int argc, char *argv[]) {
         j["burning_number"] = burning_sequence.size();
         j["burning_sequence"] = burning_sequence;
         j["execution_time"] = ms_double.count()/1000;
+        j["upper_bound"] = UB;
+        j["lower_bound"] = LB;
+
+        j["completed"] = !err_info.error;
+
+        if (err_info.error)
+            j["error_message"] = err_info.msg;
 
         out_file << std::setw(4) << j << endl;
     }
