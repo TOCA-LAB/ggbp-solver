@@ -200,6 +200,7 @@ void solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<
                     model.addConstr(done[t] <= x[u][t], "check_done_" + to_string(u) + "_" + to_string(t));
                 }
             }
+            
             // Minimiza a quantidade de turnos até todos vértices serem queimados
             GRBLinExpr obj = 0;
             for (int t = 1; t < B+1; t++) {

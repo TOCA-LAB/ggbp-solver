@@ -19,6 +19,7 @@ using std::chrono::seconds;
 
 int main(int argc, char* argv[]) {
     argparse::ArgumentParser program("GGBP-Naive");
+    program.add_description("Use the Naive ILP to determine b_r(G)");
 
     std::string graph_file_path;
     program.add_argument("file_path")
@@ -44,17 +45,17 @@ int main(int argc, char* argv[]) {
         .store_into(params.verbose);
         
     program.add_argument("-t", "--timeout")
-        .help("Define the timeout for the LP solver")
+        .help("Define the timeout (in seconds) for the LP solver")
         .default_value(7200.0)
         .store_into(params.time_limit);
 
     program.add_argument("-M", "--mem-lim")
-        .help("Define the memory limit for the LP solver")
+        .help("Define the memory limit (in GB) for the LP solver")
         .default_value(14.0)
         .store_into(params.mem_limit);
 
     program.add_argument("-m", "--soft-mem-lim")
-        .help("Define the soft memory limit for the LP solver")
+        .help("Define the soft memory (in GB) limit for the LP solver")
         .default_value(12.0)
         .store_into(params.soft_mem_limit);
 
@@ -69,12 +70,12 @@ int main(int argc, char* argv[]) {
         .store_into(params.opt);
 
     program.add_argument("-rc", "--opt-const-radius-cut")
-        .help("Define the timeout for the LP solver")
+        .help("Add the Radius Cut optimization constraint")
         .flag()
         .store_into(params.radius_cut);
 
     program.add_argument("-ac", "--opt-const-active-neighborhood")
-        .help("Define the timeout for the LP solver")
+        .help("Add the Active Neighborhood optimization constraint")
         .flag()
         .store_into(params.active_neighborhood);
 
@@ -139,8 +140,8 @@ int main(int argc, char* argv[]) {
         ggbp::ilp::naive::solve_ilp(graph, r, UB, params, burning_sequence, err_info);
     
         if (err_info.error) {
-            UB = err_info.ObjBound;
-            LB = err_info.ObjVal;
+            UB = err_info.ObjVal;
+            LB = err_info.ObjBound;
         } else {
             UB = burning_sequence.size();
             LB = burning_sequence.size();
