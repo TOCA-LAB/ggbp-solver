@@ -276,13 +276,10 @@ void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams par
             cout << "Trying to find a burning sequence of length " << B << "." << endl;
         }
 
-        err_info.msg = "";
-
         solve_ilp(g, r, B, params, temp_burning_sequence, err_info);
 
         if (err_info.error)
             return;
-
 
         int turns = ggbp::utils::burning_turns(g, r, temp_burning_sequence);
         temp_burning_sequence.resize(turns);

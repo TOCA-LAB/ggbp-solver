@@ -121,7 +121,6 @@ int main(int argc, char* argv[]) {
     
     vector<int> burning_sequence;
     ggbp::ilp::GurobiErrorInfo err_info;
-    err_info.msg = "";
     
     int UB, LB;
     if (program.is_used("-lb")) {
@@ -180,7 +179,7 @@ int main(int argc, char* argv[]) {
         
         json j;
 
-        j["instance"] = "graph_name";
+        j["instance"] = graph_name;
         j["order"] = graph.order();
         j["size"] = graph.size();
         j["burning_number"] = burning_sequence.size();
@@ -196,10 +195,6 @@ int main(int argc, char* argv[]) {
 
         out_file << std::setw(4) << j << endl;
     }
-
-    // for (auto i = burning_sequence.begin(); i < burning_sequence.end(); ++i)
-    // 	benchmark_csv << *i+1 << ","; // adding 1 to match the original vertex index 
-    // benchmark_csv << "]" << endl;
 
     return 0;
 }
