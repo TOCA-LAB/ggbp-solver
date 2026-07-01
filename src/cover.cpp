@@ -45,143 +45,6 @@ vector<int> generate_covering_tree(Graph const &g, int const r, vector<Vertex> s
     return depth;
 }
 
-
-class LazyCovering: public GRBCallback {
-    public:
-    Graph const &g;
-    vector<vector<GRBVar>> &vars_x;
-    vector<vector<GRBVar>> &vars_y;
-    vector<vector<GRBVar>> &vars_f;
-    vector<bool> &covered;
-    int B;
-    int r;
-
-    LazyCovering(Graph const &g, int r, int B, vector<vector<GRBVar>> &vars_x,
-                 vector<vector<GRBVar>> &vars_y, vector<vector<GRBVar>> &vars_f,
-                 vector<bool> &covered)
-    : g(g), vars_x(vars_x), vars_y(vars_y), vars_f(vars_f), covered(covered)
-    {
-        this->r = r;
-        this->B = B;
-    }
-
-    protected:
-    void callback() {
-        try {
-            if (where == GRB_CB_MIPSOL) {
-                cout << "callback: mipsol" << endl;
-                int num_vertices = g.order();
-                vector<int> burning_sequence;
-
-                for(int i = 0; i < B; i++) {
-                    for(Vertex u = 0; u < num_vertices; u++) {
-                        if (getSolution(vars_x[u][i]) > 0.5) {
-                            burning_sequence.push_back(u);
-                            u = num_vertices;
-                        }
-                    }
-                }
-
-                for (auto u : burning_sequence)
-                    cout << u << " ";
-                cout << endl;
-
-                Vertex unburned;
-                if (!ggbp::utils::is_burning_sequence(g, r, burning_sequence, unburned)) {
-                    cout << "Lazy vertex: " << unburned << endl;
-
-                    queue<Vertex> q;
-                    q.push(unburned); 
-
-                    auto vertices = g.vertices();
-                    auto combs = ggbp::utils::Combinations(vertices, r);
-                    
-                    while (!q.empty()) {
-                        Vertex u = q.front();
-                        q.pop();
-
-                        for (int i = 0; i < B; i++) {
-                            GRBLinExpr expr = 0;
-                            double total = 0;
-
-                            for (int j = 0; j <= i; j++) {
-                                expr += vars_x[u][j];
-                                total += getSolution(vars_x[u][i]);
-                            }
-
-                            unsigned long long s = 0;
-                            for (auto comb : combs) {
-                                auto depth = generate_covering_tree(g, r, comb);
-                                
-                                if (depth[u] - 1 < 0) {
-                                    s++;
-                                    continue; 
-                                }
-
-                                for (int j = 0; j <= i; j++) {
-                                    if (depth[u] - 1 <= i-j) {
-                                        expr += vars_f[s][j];
-
-                                        if (getSolution(vars_f[s][i]) > 0.5) {
-                                            cout << "(";
-                                
-                                            for (auto c : comb)
-                                                cout << c << ", ";
-
-                                            cout << ")/" << i << " : d[u] = " << depth[u] << " / var = "
-                                                << getSolution(vars_f[s][i]) << endl;
-                                        }
-                                        total += getSolution(vars_f[s][i]);
-                                    }
-                                }
-                                s++;
-                            }
-                            cout << total << " / " << (1 <= total) << endl;
-                            addLazy(vars_y[unburned][i] <= expr);
-                        }
-                    }
-                    // unsigned long long s = 0;
-                    // for (auto comb : combs) {
-                    //     auto depth = generate_covering_tree(g, r, comb);
-
-                    //     if (depth[unburned] == -1) {
-                    //         s++;
-                    //         continue; 
-                    //     }
-
-                    //     for (int i = 0; i < B; i++) {
-                    //         if (depth[unburned] < (B-i)) {
-                    //             expr += vars_f[s][i];  
-                    //             if (getSolution(vars_f[s][i]) > 0.5) {
-                    //                 cout << "(";
-                        
-                    //                 for (auto c : comb)
-                    //                     cout << c << ", ";
-
-                    //                 cout << ")/" << i << " : d[u] = " << depth[unburned] << " / var = "
-                    //                      << getSolution(vars_f[s][i]) << endl;
-                    //             }
-                    //             total += getSolution(vars_f[s][i]);
-                    //         }
-                    //     }
-                    //     s++;
-                    // }
-                    // cout << total << " / " << (1 <= total) << endl;
-                    // addLazy(1 <= expr);
-                    cout << "Added Lazy" << endl << endl;
-                }
-
-            }
-            // cout << endl;
-        } catch (GRBException e) {
-            cout << "Error number: " << e.getErrorCode() << endl;
-            cout << e.getMessage() << endl;
-        } catch (...) {
-            cout << "Error during callback" << endl;
-        }
-    }
-};
-
 void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info) {
     int num_vertices = g.order();
     vector<int> vertices = g.vertices();
@@ -306,11 +169,6 @@ void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_se
         // }
         // model.setObjective(obj, GRB_MAXIMIZE);
 
-        vector<bool> covered(num_vertices, false);
-
-        // model.set(GRB_IntParam_LazyConstraints, 1);
-        // LazyCovering cb = LazyCovering(g, r, B, vars_x, vars_y, vars_f, covered);
-        // model.setCallback(&cb);
         model.optimize();
 
         int opt_status = model.get(GRB_IntAttr_Status);
@@ -327,6 +185,11 @@ void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_se
             }
             Vertex u;
             cout << ggbp::utils::is_burning_sequence(g, r, burning_sequence, u) << endl;
+
+            for (auto v : burning_sequence) {
+                cout << v << " ";
+            }
+            cout << endl;
         } else if (opt_status == GRB_TIME_LIMIT) {
             err_info.error = true;
             
@@ -386,7 +249,7 @@ void find_burning_sequence(Graph const &g, int LB, int UB, int const r, vector<i
             return;
 
         int turns = ggbp::utils::burning_turns(g, r, temp_burning_sequence);
-        temp_burning_sequence.resize(turns);
+        // temp_burning_sequence.resize(turns);
 
         if(int(temp_burning_sequence.size()) == 0) {
             if (params.verbose) {
