@@ -249,19 +249,24 @@ void find_burning_sequence(Graph const &g, int const r, int &LB, int &UB, vector
             return;
 
         int turns = ggbp::utils::burning_turns(g, r, temp_burning_sequence);
-        // temp_burning_sequence.resize(turns);
+        temp_burning_sequence.resize(turns);
 
-        if(int(temp_burning_sequence.size()) == 0) {
+        if(int(temp_burning_sequence.size()) == 0) {          
             if (params.verbose) {
                 cout << "There is no burning sequence of length " << B << "." << endl << endl;
             }
+
             LB = B+1;
-        } else {
+
+            if (LB == burning_sequence.size())
+                break;
+        } else {            
             if (params.verbose) {
-                cout << "A burning sequence of length " << B << " was found." << endl << endl;
+                cout << "A burning sequence of length " << temp_burning_sequence.size() << " was found." << endl << endl;
             }
-            UB = B;
+
             swap(burning_sequence, temp_burning_sequence);
+            UB = burning_sequence.size();
 
             if (UB == LB)
                 break;
