@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     
-    std::string graph_name = fs::path(graph_file_path).stem();
+    std::string graph_name = fs::path(graph_file_path).stem().string();
 
     vector<int> burning_sequence, iters;
     int first_best;

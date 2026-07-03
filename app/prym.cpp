@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
         cout << "Invalid graph format" << endl;
     }
 
-    std::string graph_name = fs::path(graph_file_path).stem();
+    std::string graph_name = fs::path(graph_file_path).stem().string();
 
     int grb_verbose = 0;
     if (program["--verbose"] == true) {
