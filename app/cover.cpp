@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
     vector<Vertex> burning_sequence;
     ggbp::ilp::GurobiErrorInfo err_info;
     
-    ggbp::ilp::cover::find_burning_sequence(graph, r, UB, LB, burning_sequence, params, err_info);
+    ggbp::ilp::cover::find_burning_sequence(graph, r, LB, UB, burning_sequence, params, err_info);
 
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;

@@ -226,7 +226,7 @@ void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_se
     }
 }
 
-void find_burning_sequence(Graph const &g, int LB, int UB, int const r, vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info) {
+void find_burning_sequence(Graph const &g, int const r, int LB, int UB, vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info) {
     PRECONDITION(r >= 1);
     PRECONDITION(G.order() >= r);
 
