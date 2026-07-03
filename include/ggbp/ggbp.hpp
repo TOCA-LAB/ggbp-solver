@@ -104,7 +104,7 @@ namespace ggbp::ilp {
 
         void solve_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info);
 
-        void find_burning_sequence(Graph const &g, int const r, int LB, int UB, std::vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info);
+        void find_burning_sequence(Graph const &g, int const r, int &LB, int &UB, std::vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info);
     }
     
     namespace prym {
