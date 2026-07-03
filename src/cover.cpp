@@ -270,6 +270,8 @@ void find_burning_sequence(Graph const &g, int const r, int &LB, int &UB, vector
         iteration++;
     }
 
-    cout << "Optimal burning sequence has length " << int(burning_sequence.size()) << "." << endl << endl;
+    if (params.verbose) {
+        cout << "Optimal burning sequence has length " << int(burning_sequence.size()) << "." << endl << endl;
+    }
 }
 }
