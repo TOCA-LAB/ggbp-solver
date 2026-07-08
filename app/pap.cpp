@@ -91,7 +91,9 @@ int main(int argc, char* argv[]) {
     }
     
     vector<int> seed_set;
-    ggbp::ilp::pap::solve_ilp(graph, r, seed_set, params);
+    ggbp::ilp::GurobiErrorInfo err_info;
+
+    ggbp::ilp::pap::solve_ilp(graph, r, seed_set, params, err_info);
 
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;
@@ -120,6 +122,15 @@ int main(int argc, char* argv[]) {
         j["size"] = graph.size();
         j["seed_size"] = seed_set.size();
         j["seed_set"] = seed_set;
+        j["execution_time"] = ms_double.count()/1000;
+
+        j["completed"] = !err_info.error;
+
+        if (err_info.error) {
+            j["error_message"] = err_info.msg;
+            j["upper_bound"] = err_info.ObjVal;
+            j["lower_bound"] = err_info.ObjBound;
+        }
 
         out_file << std::setw(4) << j << endl;
     }

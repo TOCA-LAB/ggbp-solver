@@ -9,7 +9,7 @@ namespace ggbp::ilp::pap {
 using std::vector;
 using std::cout, std::endl;
 
-void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp::GurobiParams params) {
+void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiErrorInfo &err_info) {
     int const n_vertices = graph.order();
 
     try {        
@@ -93,11 +93,38 @@ void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp:
                     seed_set.push_back(u);
                 }
             }
+        } else if (opt_status == GRB_TIME_LIMIT) {
+            err_info.error = true;
+            
+            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
+                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
+            else
+                err_info.ObjVal = n_vertices;
+            
+            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
+            err_info.msg = "time limit";
+        } else if (opt_status == GRB_MEM_LIMIT) {
+            err_info.error = true;
+
+            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
+                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
+            else
+                err_info.ObjVal = n_vertices;
+
+            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
+            err_info.msg = "memory limit";
         }
 
     } catch (GRBException e) {
         cout << "Error code = " << e.getErrorCode() << endl;
         cout << e.getMessage() << endl;
+
+        if (e.getErrorCode() == GRB_ERROR_OUT_OF_MEMORY) {
+            err_info.error = true;
+            err_info.ObjVal = n_vertices;
+            err_info.ObjBound = 0;
+            err_info.msg = "out of memory";
+        }
     } catch (...) {
         cout << "Exception during optimization" << endl;
     }
