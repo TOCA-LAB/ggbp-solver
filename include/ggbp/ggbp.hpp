@@ -11,7 +11,7 @@
 
 namespace ggbp::brkga {
     struct BRKGAParams {
-        unsigned n, p, MAX_GENS;
+        unsigned p, MAX_GENS;
         double pe, pm, rhoe;
         unsigned K, MAXT;
         unsigned seed;

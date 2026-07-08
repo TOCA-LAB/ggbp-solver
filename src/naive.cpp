@@ -24,7 +24,6 @@ int get_lower_bound(Graph const &g, int const r, bool verbose) {
 int get_upper_bound(Graph const &graph, int const r, bool verbose) {
     ggbp::brkga::BRKGAParams params;
     
-    params.n = graph.order();
     params.p = 60;
     params.MAX_GENS = 25;
     params.pe = 0.20;

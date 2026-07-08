@@ -106,7 +106,7 @@ void brkga(Graph const &graph, const int r, BRKGAParams params, vector<int> &bur
     
     // initialize the BRKGA-based heuristic
     BRKGA<ggbp::brkga::Decoder, MTRand> algorithm(
-        params.n,
+        graph.order(),
         params.p,
         params.pe,
         params.pm,
@@ -117,7 +117,7 @@ void brkga(Graph const &graph, const int r, BRKGAParams params, vector<int> &bur
         params.MAXT
     );
 
-     unsigned generation = 0;                               // current generation
+    unsigned generation = 0;                               // current generation
     const unsigned X_INTVL = 10;                            // exchange best individuals at every 100 generations
     const unsigned X_NUMBER = 2;                            // exchange top 2 best
     const unsigned MAX_GENS = params.MAX_GENS;              // max number of generations
@@ -132,7 +132,7 @@ void brkga(Graph const &graph, const int r, BRKGAParams params, vector<int> &bur
         int fitness = algorithm.getBestFitness();
         
         if (params.verbose == true) {
-            cout << "Generation " << generation << " best solution found has objective value = "
+            cout << "Generation " << generation + 1 << " best solution found has objective value = "
                  << fitness << endl;
         }
 
