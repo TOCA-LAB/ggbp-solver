@@ -57,10 +57,9 @@ namespace ggbp::grasp {
 }
 
 namespace ggbp::heuristics {
+    std::vector<Vertex> greedy(Graph const &graph, int const r);
 
-std::vector<Vertex> greedy(const Graph &graph, const int r);
-// std::vector<Graph::Vertex> unburned_neighbors(const Graph &graph, const int r);
-
+    std::vector<Vertex> unburned_neighbors(Graph const &graph, int const r);
 }
 
 namespace ggbp::ilp {

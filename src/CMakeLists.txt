@@ -1,12 +1,15 @@
 set(GGBP_SOURCES
     graph.cpp
     ggbp_utils.cpp
-    greedy.cpp
-    grasp.cpp
     cover.cpp
     naive.cpp
     prym.cpp
     pap.cpp
+    grasp.cpp
+    brkga.cpp
+    greedy.cpp
+    dominating.cpp
+    unburned_neighbors.cpp
 )
 
 add_library(ggbp STATIC ${GGBP_SOURCES}

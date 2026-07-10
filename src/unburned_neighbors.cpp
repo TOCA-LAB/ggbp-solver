@@ -1,12 +1,20 @@
-void unburned_neighbors(Graph &graph, int r, vector<int> &burning_sequence) {
-    int n_vertices = graph.size();
+#include <vector>
+#include <forward_list>
+#include "ggbp/graph.hpp"
+
+#include "ggbp/ggbp.hpp"
+
+using std::vector, std::forward_list;
+
+vector<Vertex> ggbp::heuristics::unburned_neighbors(Graph const &graph, int const r) {
+    int n_vertices = graph.order();
     
     int n_burning = 0;
     vector<int> burning(n_vertices, 0);
 
     vector<int> num_burning_neighbors(n_vertices);
 
-    burning_sequence.clear();
+    vector<int> burning_sequence;
 
     forward_list<int> to_burn;
 
@@ -20,7 +28,7 @@ void unburned_neighbors(Graph &graph, int r, vector<int> &burning_sequence) {
         }
         
         for (auto v : to_burn) {
-            for (auto u : graph.neighborhood(v)) {
+            for (auto u : graph.neighbors(v)) {
                 num_burning_neighbors[u]++;    
 
                 if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
@@ -33,7 +41,6 @@ void unburned_neighbors(Graph &graph, int r, vector<int> &burning_sequence) {
         int max_vertex = 0;
         int max_neighbors = 0;
 
-
         for (int u = 0; u < n_vertices; u++) {
             if (graph.degree(u) - num_burning_neighbors[u] > max_neighbors && !burning[u] && !in_to_burn[u]) {
                 max_vertex = u;
@@ -45,7 +52,7 @@ void unburned_neighbors(Graph &graph, int r, vector<int> &burning_sequence) {
         burning[max_vertex] = 1;
         n_burning++;
     
-        for (auto u : graph.neighborhood(max_vertex)) {
+        for (auto u : graph.neighbors(max_vertex)) {
             num_burning_neighbors[u]++;
             
             if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
@@ -57,5 +64,6 @@ void unburned_neighbors(Graph &graph, int r, vector<int> &burning_sequence) {
         to_burn = next_to_burn;
         next_to_burn.clear();
     }
-}
 
+    return burning_sequence;
+}
