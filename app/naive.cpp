@@ -155,13 +155,12 @@ int main(int argc, char* argv[]) {
     cout << graph_name << "; "
          << graph.order() << "; "<< graph.size() << "; ";
 
-    if (err_info.error) {
-        cout << burning_sequence.size() << "; " ;
+    if (!err_info.error) {
+        cout << burning_sequence.size() << "; [" ;
 
         for (auto u : burning_sequence)
             cout << u << ", ";
-        cout << endl;
-
+        cout << "]" << endl;
     } else {
         cout << err_info.ObjBound << "; " << err_info.ObjVal << "; --; ";
     }
