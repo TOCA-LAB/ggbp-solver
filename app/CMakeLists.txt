@@ -28,5 +28,8 @@ target_link_libraries(unburned_neighbors PRIVATE ggbp)
 add_executable(greedy greedy.cpp)
 target_link_libraries(greedy PRIVATE ggbp)
 
+add_executable(dominating dominating.cpp)
+target_link_libraries(dominating PRIVATE ggbp)
+
 add_executable(sandbox sandbox.cpp)
 target_link_libraries(sandbox PRIVATE ggbp)

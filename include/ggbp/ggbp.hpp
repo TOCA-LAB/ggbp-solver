@@ -56,11 +56,6 @@ namespace ggbp::grasp {
     );
 }
 
-namespace ggbp::heuristics {
-    std::vector<Vertex> greedy(Graph const &graph, int const r);
-
-    std::vector<Vertex> unburned_neighbors(Graph const &graph, int const r);
-}
 
 namespace ggbp::ilp {
     struct GurobiParams {
@@ -109,14 +104,22 @@ namespace ggbp::ilp {
     namespace prym {
         void run_bff_d(Graph &graph, std::vector<int> &burning_sequence);
 
-        void solve_prym(Graph &graph, int B, std::vector<int> &temp_burning_sequence, std::vector<int> initial_covered_vertices);
+        void solve_prym(Graph &graph, int B, std::vector<int> &temp_burning_sequence, std::vector<int> initial_covered_vertices, GurobiParams params);
 
-        void run_prym(Graph &graph, std::vector<int> &burning_sequence);
+        void run_prym(Graph &graph, std::vector<int> &burning_sequence, GurobiParams params);
     }
 
     namespace pap {
-        void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiErrorInfo &err_info);
+        void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, GurobiParams params, GurobiErrorInfo &err_info);
     }
+}
+
+namespace ggbp::heuristics {
+    std::vector<Vertex> greedy(Graph const &graph, int const r);
+
+    std::vector<Vertex> unburned_neighbors(Graph const &graph, int const r);
+
+    std::vector<Vertex> dominating(Graph const &graph, int r, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiErrorInfo &err_info);
 }
 
 #endif

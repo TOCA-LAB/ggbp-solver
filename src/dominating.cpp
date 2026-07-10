@@ -1,13 +1,109 @@
-void dominating(Graph &graph, int r, vector<int> &burning_sequence, bool verbose) {
+#include <vector>
+#include <forward_list>
+#include <string>
+#include <iostream>
+#include <exception>
+#include "ggbp/graph.hpp"
+#include "gurobi_c++.h"
+
+#include "ggbp/ggbp.hpp"
+
+namespace ggbp::heuristics {
+using std::vector, std::forward_list;
+
+void min_dominating_set(Graph const &graph, vector<int> &dominating_set, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiErrorInfo &err_info) {
+    try {
+        int n_vertices = graph.order();
+
+        GRBEnv env(true);
+        env.set(GRB_IntParam_OutputFlag, params.verbose);
+
+        env.start();
+        GRBModel model(env);
+
+        model.set(GRB_DoubleParam_TimeLimit, params.time_limit);
+        model.set(GRB_DoubleParam_SoftMemLimit, params.soft_mem_limit);
+        model.set(GRB_DoubleParam_MemLimit, params.mem_limit);
+
+        vector<GRBVar> vars_x(n_vertices);
+
+        for (int u = 0; u < n_vertices; u++)
+            vars_x[u] = model.addVar(0, 1, 0, GRB_BINARY, "x_" + std::to_string(u));
+        
+        for (int u = 0; u < n_vertices; u++) {
+            GRBLinExpr expr = 0;
+            for (auto v : graph.neighbors(u))
+                expr += vars_x[v];
+            model.addConstr(vars_x[u] + expr >= 1);
+        }
+        
+        GRBLinExpr obj = 0;
+        for (int u = 0; u < n_vertices; u++)
+            obj += vars_x[u];
+        
+        model.setObjective(obj, GRB_MINIMIZE);
+
+        model.optimize();
+
+        auto opt_status = model.get(GRB_IntAttr_Status);
+        if (opt_status == GRB_OPTIMAL) {
+            dominating_set.reserve(model.get(GRB_DoubleAttr_ObjVal));
+            for(int j = 0; j < n_vertices; j++) {
+                if(vars_x[j].get(GRB_DoubleAttr_X) > 0.5) {
+                    dominating_set.push_back(j);
+                }
+            }
+        } else if (opt_status == GRB_TIME_LIMIT) {
+            err_info.error = true;
+            
+            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
+                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
+            else
+                err_info.ObjVal = n_vertices;
+            
+            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
+            err_info.msg = "time limit";
+        } else if (opt_status == GRB_MEM_LIMIT) {
+            err_info.error = true;
+
+            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
+                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
+            else
+                err_info.ObjVal = n_vertices;
+
+            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
+            err_info.msg = "memory limit";
+        }
+
+    } catch (GRBException e) {
+        std::cout << "Error code = " << e.getErrorCode() << std::endl;
+        std::cout << e.getMessage() << std::endl;
+
+        err_info.error = true;
+        err_info.ObjVal = graph.order();
+        err_info.ObjBound = 0;
+        if (e.getErrorCode() == GRB_ERROR_OUT_OF_MEMORY) {
+            err_info.msg = "out of memory";
+        }
+    } catch (...) {
+        std::cout << "Exception during optimization" << std::endl;
+        err_info.error = true;
+        err_info.ObjVal = graph.order();
+        err_info.ObjBound = 0;
+    }
+}
+
+vector<Vertex> dominating(Graph const &graph, int r, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiErrorInfo &err_info) {
     vector<int> dominating_set;
 
-    try {
-        min_dominating_set(graph, dominating_set, verbose);
-    } catch (...) {
-        throw;
+    min_dominating_set(graph, dominating_set, params, err_info);
+
+    if (err_info.error) {
+        return {};
     }
 
-    int n_vertices = graph.size();
+    int n_vertices = graph.order();
+    vector<Vertex> burning_sequence;
 
     int n_burning = 0;
     vector<int> burning(n_vertices);
@@ -25,7 +121,7 @@ void dominating(Graph &graph, int r, vector<int> &burning_sequence, bool verbose
         }
         
         for (auto v : to_burn) {
-            for (auto u : graph.neighborhood(v)) {
+            for (auto u : graph.neighbors(v)) {
                 num_burning_neighbors[u]++;
                 
                 if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
@@ -46,7 +142,7 @@ void dominating(Graph &graph, int r, vector<int> &burning_sequence, bool verbose
         burning[*curr_vertex] = 1;
         n_burning++;
         
-        for (auto u : graph.neighborhood(*curr_vertex)) {
+        for (auto u : graph.neighbors(*curr_vertex)) {
             num_burning_neighbors[u]++;
             
             if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
@@ -73,7 +169,7 @@ void dominating(Graph &graph, int r, vector<int> &burning_sequence, bool verbose
         }
         
         for (auto v : to_burn) {
-            for (auto u : graph.neighborhood(v)) {
+            for (auto u : graph.neighbors(v)) {
                 num_burning_neighbors[u]++;
                 
                 if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
@@ -89,7 +185,7 @@ void dominating(Graph &graph, int r, vector<int> &burning_sequence, bool verbose
         for (int u = 0; u < n_vertices; u++) {
             if (!burning[u] && !in_to_burn[u]) {
                 int new_spontaneous = 0;
-                for (auto v : graph.neighborhood(u)) {
+                for (auto v : graph.neighbors(u)) {
                     if (num_burning_neighbors[v] == r-1 && !burning[v] && !in_to_burn[v]) {
                         new_spontaneous++;
                     }
@@ -106,7 +202,7 @@ void dominating(Graph &graph, int r, vector<int> &burning_sequence, bool verbose
         burning[max_vertex] = 1;
         n_burning++;
 
-        for (auto u : graph.neighborhood(max_vertex)) {
+        for (auto u : graph.neighbors(max_vertex)) {
             num_burning_neighbors[u]++;
             
             if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
@@ -119,5 +215,7 @@ void dominating(Graph &graph, int r, vector<int> &burning_sequence, bool verbose
         to_burn = next_to_burn;
         next_to_burn.clear();
     }
-}
 
+    return burning_sequence;
+}
+}
