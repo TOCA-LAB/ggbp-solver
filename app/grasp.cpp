@@ -45,9 +45,11 @@ int main(int argc, char* argv[]) {
         .default_value(100)
         .store_into(T);
 
+    bool verbose;
     program.add_argument("-V", "--verbose")
         .help("Increase output verbosity")
-        .flag();
+        .flag()
+        .store_into(verbose);
 
     program.add_argument("-S", "--seed")
         .help("Define seed for the RNG")
@@ -61,7 +63,7 @@ int main(int argc, char* argv[]) {
         program.parse_args(argc, argv);
     }
     catch (const std::exception& err) {
-        std::cerr << err.what() << std::endl;
+        std::cerr << err.what() << endl;
         std::cerr << program;
         std::exit(1);
     }
@@ -82,8 +84,6 @@ int main(int argc, char* argv[]) {
     
     std::string graph_name = fs::path(graph_file_path).stem().string();
 
-    int verbose = program["--verbose"] == true ? 1 : 0;
-
     unsigned seed;
 
     if (program.present("-S")) {
@@ -103,13 +103,14 @@ int main(int argc, char* argv[]) {
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;
 
-    std::cout << graph_name << "; "
+    cout << graph_name << "; "
               << graph.order() << "; "<< graph.size() << "; "
               << burning_sequence.size() << "; "
               << ms_double.count()/1000 << "; [";
-    for (auto i = burning_sequence.begin(); i < burning_sequence.end(); ++i)
-        std::cout << *i+1 << ","; // adding 1 to match the original vertex index 
-    std::cout << "]" << std::endl;
+
+    for (auto u : burning_sequence)
+        cout << u + 1 << ","; // adding 1 to match the original vertex index 
+    cout << "]" << endl;
 
     if (program.present("--json")) {
         std::ofstream out_file(program.get("--json"));
