@@ -159,6 +159,7 @@ int main(int argc, char* argv[]) {
         j["execution_time"] = ms_double.count()/1000;
         j["iters"] = iters;
         j["first_best"] = first_best;
+        j["algorithm"] = "brkga";
         j["params"] = {
             {"population", params.p},
             {"generations", params.MAX_GENS},

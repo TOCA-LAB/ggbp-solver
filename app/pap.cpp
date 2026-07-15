@@ -123,6 +123,7 @@ int main(int argc, char* argv[]) {
         j["seed_size"] = seed_set.size();
         j["seed_set"] = seed_set;
         j["execution_time"] = ms_double.count()/1000;
+        j["algorithm"] = "pap";
 
         j["completed"] = !err_info.error;
 

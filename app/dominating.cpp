@@ -121,6 +121,7 @@ int main(int argc, char* argv[]) {
         j["burning_number"] = burning_sequence.size();
         j["burning_sequence"] = burning_sequence;
         j["execution_time"] = ms_double.count()/1000;
+        j["algorithm"] = "dominating";
 
         j["completed"] = !err_info.error;
 

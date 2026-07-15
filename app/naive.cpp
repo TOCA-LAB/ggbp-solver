@@ -186,6 +186,7 @@ int main(int argc, char* argv[]) {
         j["execution_time"] = ms_double.count()/1000;
         j["upper_bound"] = UB;
         j["lower_bound"] = LB;
+        j["algorithm"] = "naive";
 
         j["completed"] = !err_info.error;
 
