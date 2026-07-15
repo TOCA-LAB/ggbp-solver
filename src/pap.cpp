@@ -119,14 +119,19 @@ void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp:
         cout << "Error code = " << e.getErrorCode() << endl;
         cout << e.getMessage() << endl;
 
+        err_info.error = true;
+        err_info.ObjVal = n_vertices;
+        err_info.ObjBound = 0;
         if (e.getErrorCode() == GRB_ERROR_OUT_OF_MEMORY) {
-            err_info.error = true;
-            err_info.ObjVal = n_vertices;
-            err_info.ObjBound = 0;
             err_info.msg = "out of memory";
+        } else {
+            err_info.msg = "unknown error";
         }
     } catch (...) {
         cout << "Exception during optimization" << endl;
+        err_info.error = true;
+        err_info.ObjVal = graph.order();
+        err_info.ObjBound = 0;
     }
 }
 
