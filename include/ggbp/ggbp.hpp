@@ -104,9 +104,9 @@ namespace ggbp::ilp {
     namespace prym {
         void run_bff_d(Graph &graph, std::vector<int> &burning_sequence);
 
-        void solve_prym(Graph &graph, int B, std::vector<int> &temp_burning_sequence, std::vector<int> initial_covered_vertices, GurobiParams params);
+        void solve_prym(Graph &graph, int B, std::vector<int> &temp_burning_sequence, std::vector<int> initial_covered_vertices, GurobiParams params, GurobiErrorInfo &err_info);
 
-        void run_prym(Graph &graph, std::vector<int> &burning_sequence, GurobiParams params);
+        void run_prym(Graph &graph, std::vector<int> &burning_sequence, GurobiParams params, GurobiErrorInfo &err_info);
     }
 
     namespace pap {

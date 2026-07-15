@@ -134,13 +134,19 @@ class callback_prym: public GRBCallback {
         }
 };
 
-void solve_prym(Graph &graph, int B, vector<int> &temp_burning_sequence, vector<int> initial_covered_vertices) {
+void solve_prym(Graph &graph, int B, vector<int> &temp_burning_sequence, vector<int> initial_covered_vertices, GurobiParams params, GurobiErrorInfo &err_info) {
     try {
         GRBEnv env(true);
+        env.set(GRB_IntParam_OutputFlag, params.verbose);
         env.start();
         GRBModel model(env);
 
+        model.set(GRB_DoubleParam_TimeLimit, params.time_limit);
+        model.set(GRB_DoubleParam_SoftMemLimit, params.soft_mem_limit);
+        model.set(GRB_DoubleParam_MemLimit, params.mem_limit);
+
         int n_vertices = graph.order();
+
         vector<vector<GRBVar>> vars_x(n_vertices, vector<GRBVar>(B));
         for (int i = 0; i < n_vertices; i++)
             for (int j = 0; j < B; j++)
@@ -179,8 +185,8 @@ void solve_prym(Graph &graph, int B, vector<int> &temp_burning_sequence, vector<
         model.optimize();
         
         temp_burning_sequence.clear();
-        if(model.get(GRB_IntAttr_Status) == 2)
-        {
+        auto opt_status = model.get(GRB_IntAttr_Status);
+        if(opt_status == 2) {
             for(int j = 0; j < B; j++)
                 for(int i = 0; i < n_vertices; i++)
                     if(vars_x[i][j].get(GRB_DoubleAttr_X) > 0.5) {
@@ -188,43 +194,87 @@ void solve_prym(Graph &graph, int B, vector<int> &temp_burning_sequence, vector<
                         cout << i << " " << endl;
                     }
             cout << endl;
+        } else if (opt_status == GRB_TIME_LIMIT) {
+            err_info.error = true;
+            
+            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
+                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
+            else
+                err_info.ObjVal = n_vertices;
+            
+            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
+            err_info.msg = "time limit";
+        } else if (opt_status == GRB_MEM_LIMIT) {
+            err_info.error = true;
+
+            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
+                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
+            else
+                err_info.ObjVal = n_vertices;
+
+            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
+            err_info.msg = "memory limit";
         }
+
     } catch (GRBException e) {
         cout << "Error code = " << e.getErrorCode() << endl;
         cout << e.getMessage() << endl;
+
+        err_info.error = true;
+        err_info.ObjVal = graph.order();
+        err_info.ObjBound = 0;
+        if (e.getErrorCode() == GRB_ERROR_OUT_OF_MEMORY) {
+            err_info.msg = "out of memory";
+        } else {
+            err_info.msg = "unknown error";
+        }
     } catch (...) {
         cout << "Exception during optimization" << endl;
+        err_info.error = true;
+        err_info.ObjVal = graph.order();
+        err_info.ObjBound = 0;
     }
 }
 
 
-void run_prym(Graph &graph, vector<int> &burning_sequence) {
+void run_prym(Graph &graph, vector<int> &burning_sequence, GurobiParams params, GurobiErrorInfo &err_info) {
     int LB, UB, B;
     vector<int> temp_burning_sequence, initial_covered_vertices;
+
     run_bff_d(graph, temp_burning_sequence);
+
     burning_sequence = temp_burning_sequence;
     initial_covered_vertices = temp_burning_sequence;
+
     UB = int(temp_burning_sequence.size());
     LB = ceil((2.0*UB)/3) + 0.5;
 
-    cout << "BFF-d found a burning sequence of length " << UB << endl << endl;
+    if (params.verbose)
+        cout << "BFF-d found a burning sequence of length " << UB << endl << endl;
     
     while (LB < UB) {
         B = (LB + UB)/2;
 
-        cout << "Current lower bound = " << LB << endl;
-        cout << "Current upper bound = " << UB << endl;
-        cout << "Trying to find a burning sequence of length " << B << "." << endl << endl;
+        if (params.verbose) {
+            cout << "Current lower bound = " << LB << endl;
+            cout << "Current upper bound = " << UB << endl;
+            cout << "Trying to find a burning sequence of length " << B << "." << endl << endl;
+        }
 
-        solve_prym(graph, B, temp_burning_sequence, initial_covered_vertices);
+        solve_prym(graph, B, temp_burning_sequence, initial_covered_vertices, params, err_info);
 
+        if (err_info.error)
+            return;
+
+        if (params.verbose)
         cout << temp_burning_sequence.size() << endl;
 
         if (temp_burning_sequence.size() > 0) {
             swap(burning_sequence, temp_burning_sequence);
             UB = B;
-        } else
+        } else {
             LB = B + 1;
+        }
     }
 }
 

@@ -31,17 +31,29 @@ int main(int argc, char* argv[]) {
         .choices("mtx", "g6")
         .store_into(format);
 
-    program.add_argument("-V", "--verbose")
+    ggbp::ilp::GurobiParams params;
+       program.add_argument("-V", "--verbose")
         .help("Increase output verbosity")
-        .flag();
-
-    program.add_argument("-d", "--debug")
-        .help("Choose to run only some functions")
-        .default_value("normal")
-        .required();
+        .flag()
+        .store_into(params.verbose);
         
-    program.add_argument("-o", "--out-file")
-        .help("Choose the output file");
+    program.add_argument("-t", "--timeout")
+        .help("Define the timeout for the LP solver")
+        .default_value(1800.0)
+        .store_into(params.time_limit);
+
+    program.add_argument("-M", "--mem-lim")
+        .help("Define the memory limit for the LP solver")
+        .default_value(14.0)
+        .store_into(params.mem_limit);
+
+    program.add_argument("-m", "--soft-mem-lim")
+        .help("Define the soft memory limit for the LP solver")
+        .default_value(12.0)
+        .store_into(params.soft_mem_limit);
+        
+    program.add_argument("--json")
+        .help("Choose the output json file");
 
         
     try {
@@ -68,15 +80,10 @@ int main(int argc, char* argv[]) {
     }
 
     std::string graph_name = fs::path(graph_file_path).stem().string();
-
-    int grb_verbose = 0;
-    if (program["--verbose"] == true) {
-        std::cout << graph_name << ": " << graph.order() << " " << graph.size() << std::endl;
-        grb_verbose = 1;
-    }
     
     vector<int> burning_sequence;
-    ggbp::ilp::prym::run_prym(graph, burning_sequence);
+    ggbp::ilp::GurobiErrorInfo err_info;
+    ggbp::ilp::prym::run_prym(graph, burning_sequence, params, err_info);
 
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;
@@ -105,6 +112,15 @@ int main(int argc, char* argv[]) {
         j["size"] = graph.size();
         j["burning_number"] = burning_sequence.size();
         j["burning_sequence"] = burning_sequence;
+        j["execution_time"] = ms_double.count()/1000;
+
+        j["completed"] = !err_info.error;
+
+        if (err_info.error) {
+            j["error_message"] = err_info.msg;
+            j["upper_bound"] = err_info.ObjVal;
+            j["lower_bound"] = err_info.ObjBound;
+        }
 
         out_file << std::setw(4) << j << endl;
     }
