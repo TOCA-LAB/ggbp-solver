@@ -7,7 +7,7 @@ set(GGBP_SOURCES
     pap.cpp
     grasp.cpp
     brkga.cpp
-    greedy.cpp
+    spontaneous_neighbors.cpp
     dominating.cpp
     unburned_neighbors.cpp
 )
