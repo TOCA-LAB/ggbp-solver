@@ -39,11 +39,6 @@ int main(int argc, char* argv[]) {
         .help("Increase output verbosity")
         .flag();
 
-    program.add_argument("-d", "--debug")
-        .help("Choose to run only some functions")
-        .default_value("normal")
-        .required();
-
     ggbp::brkga::BRKGAParams params;
     program.add_argument("-p", "--pop")
         .help("Define the size of each population")
@@ -121,6 +116,12 @@ int main(int argc, char* argv[]) {
     
     std::string graph_name = fs::path(graph_file_path).stem().string();
 
+    if (program.present("-S")) {
+        params.seed = program.get<unsigned>("-S");
+    } else {
+        params.seed = std::chrono::system_clock::now().time_since_epoch().count();
+    }
+
     vector<int> burning_sequence, iters;
     int first_best;
 
@@ -158,6 +159,15 @@ int main(int argc, char* argv[]) {
         j["execution_time"] = ms_double.count()/1000;
         j["iters"] = iters;
         j["first_best"] = first_best;
+        j["params"] = {
+            {"population", params.p},
+            {"generations", params.MAX_GENS},
+            {"elite_fraction", params.pe},
+            {"mutant_fraction", params.pm},
+            {"alele_probability", params.rhoe},
+            {"number_populations", params.K},
+            {"seed", params.seed}
+        };
 
         out_file << std::setw(4) << j << endl;
     }
