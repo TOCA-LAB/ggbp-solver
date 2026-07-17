@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
         j["order"] = graph.order();
         j["size"] = graph.size();
         j["r"] = r;
-        j["algorithm"] = "sn";
+        j["algorithm"] = "spontaneous";
         j["burning_number"] = burning_sequence.size();
         j["burning_sequence"] = burning_sequence;
         j["execution_time"] = ms_double.count()/1000;
