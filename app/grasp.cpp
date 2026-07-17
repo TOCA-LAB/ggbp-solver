@@ -1,9 +1,11 @@
-#include <iostream>
 #include <chrono>
+#include <iostream>
+#include <filesystem>
+#include <fstream>
+#include <format>
 #include <random>
 #include <string>
-#include <fstream>
-#include <filesystem>
+
 #include <argparse/argparse.hpp>
 #include <nlohmann/json.hpp>
 #include "ggbp/ggbp.hpp"
@@ -103,14 +105,14 @@ int main(int argc, char* argv[]) {
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;
 
-    cout << graph_name << "; "
-              << graph.order() << "; "<< graph.size() << "; "
-              << burning_sequence.size() << "; "
-              << ms_double.count()/1000 << "; [";
+    cout << std::format("graph: {}, n = {}, m = {}\n", graph_name, graph.order(), graph.size())
+         << std::format("runtime = {}", ms_double.count() / 1000) << endl
+         << std::format("b_{}(G) = {}\n", r, burning_sequence.size());
 
+    cout << "burning Sequence = ";
     for (auto u : burning_sequence)
-        cout << u + 1 << ","; // adding 1 to match the original vertex index 
-    cout << "]" << endl;
+        cout << u + 1 << " ";
+    cout << endl;
 
     if (program.present("--json")) {
         std::ofstream out_file(program.get("--json"));

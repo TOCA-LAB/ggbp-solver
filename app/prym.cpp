@@ -1,8 +1,10 @@
-#include <iostream>
 #include <chrono>
-#include <string>
-#include <fstream>
+#include <iostream>
 #include <filesystem>
+#include <fstream>
+#include <format>
+#include <string>
+
 #include <argparse/argparse.hpp>
 #include <nlohmann/json.hpp>
 #include "ggbp/graph.hpp"
@@ -88,14 +90,27 @@ int main(int argc, char* argv[]) {
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;
 
-    std::cout << graph_name << "; "
-              << graph.order() << "; "<< graph.size() << "; "
-              << burning_sequence.size() << "; "
-              << ms_double.count()/1000 << "; [";
-    for (auto i = burning_sequence.begin(); i < burning_sequence.end(); ++i)
-        std::cout << *i+1 << ","; // adding 1 to match the original vertex index 
-    std::cout << "]" << std::endl;
+    cout << std::format("graph: {}, n = {}, m = {}\n", graph_name, graph.order(), graph.size())
+         << std::format("runtime = {}", ms_double.count() / 1000) << endl
+         << std::format("b(G) = {}\n", burning_sequence.size());
 
+    cout << "burning Sequence = ";
+    for (auto u : burning_sequence)
+        cout << u + 1 << " ";
+    cout << endl;
+
+    if (!err_info.error) {     
+        cout << std::format("b(G) = {}\n", burning_sequence.size());
+
+        cout << "burning Sequence = ";
+        for (auto u : burning_sequence)
+            cout << u + 1 << " ";
+        cout << endl;
+    } else {
+        cout << "Failed to compute burning sequence. Error: " << err_info.msg << endl;
+    }
+
+    
     if (program.present("--json")) {
         std::ofstream out_file(program.get("--json"));
         

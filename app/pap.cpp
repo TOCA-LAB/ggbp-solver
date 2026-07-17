@@ -98,13 +98,20 @@ int main(int argc, char* argv[]) {
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;
 
-    cout << graph_name << "; "
-         << graph.order() << "; "<< graph.size() << "; ";
 
-    for (auto u : seed_set)
-        cout << u << ", ";
-    cout << endl;
+    cout << std::format("graph: {}, n = {}, m = {}\n", graph_name, graph.order(), graph.size())
+         << std::format("runtime = {}", ms_double.count() / 1000) << endl;
 
+    if (!err_info.error) {     
+        cout << std::format("|S| = {}\n", r, seed_set.size());
+
+        cout << "seed set = ";
+        for (auto u : seed_set)
+            cout << u + 1 << " ";
+        cout << endl;
+    } else {
+        cout << "Failed to compute burning sequence. Error: " << err_info.msg << endl;
+    }
 
     if (program.present("--json")) {
         std::ofstream out_file(program.get("--json"));
