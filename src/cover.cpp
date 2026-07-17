@@ -146,29 +146,6 @@ void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_se
             }
         }
 
-        // for (auto u = 0; u < g.order(); u++) {
-        //     if (g.degree(u) < r) {
-        //         GRBLinExpr expr = 0;
-                
-        //         for (int i = 0; i < B; i++) {
-        //             expr += vars_x[u][i];
-        //         }
-        //         model.addConstr(expr == 1);
-        //         cout << u << endl;
-        //     }
-        // }
-
-        // vector<int> seq =  {1, 3, 4};
-        // for (int i = 0; i < seq.size(); i++) {
-        //     model.addConstr(vars_x[seq[i]][i] == 1);
-        // }
-    
-        // GRBLinExpr obj = 0;
-        // for (int u = 0; u < num_vertices; u++) {
-        //     obj += vars_y[u][B-1];
-        // }
-        // model.setObjective(obj, GRB_MAXIMIZE);
-
         model.optimize();
 
         int opt_status = model.get(GRB_IntAttr_Status);
@@ -183,13 +160,6 @@ void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_se
                     
                 }
             }
-            Vertex u;
-            cout << ggbp::utils::is_burning_sequence(g, r, burning_sequence, u) << endl;
-
-            for (auto v : burning_sequence) {
-                cout << v << " ";
-            }
-            cout << endl;
         } else if (opt_status == GRB_TIME_LIMIT) {
             err_info.error = true;
             
