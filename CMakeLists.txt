@@ -13,9 +13,10 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 
-
-option(BUILD_TESTS "Build unit tests" ON)
-enable_testing()
+if(BUILD_TESTS)
+    message(STATUS "Building tests")
+    enable_testing()
+endif()
 
 find_package(GUROBI REQUIRED)
 find_package(Boost REQUIRED CONFIG)
