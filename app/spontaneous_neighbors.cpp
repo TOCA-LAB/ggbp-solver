@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
     
     std::string graph_name = fs::path(graph_file_path).stem().string();
 
-    auto burning_sequence = ggbp::heuristics::greedy(graph, r);
+    auto burning_sequence = ggbp::heuristics::spontaneous_neighbors(graph, r);
 
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;

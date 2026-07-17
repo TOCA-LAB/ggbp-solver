@@ -247,7 +247,7 @@ initialize_burning_state(const Graph& G,
     return {std::move(burning_sequence), std::move(burning_round)};
 }
 
-vector<Vertex> greedy(const Graph &G, const int r) {
+vector<Vertex> spontaneous_neighbors(const Graph &G, const int r) {
   PRECONDITION(r >= 1);
 
   logger.info(1) << "starting greedy...";

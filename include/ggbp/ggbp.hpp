@@ -115,7 +115,7 @@ namespace ggbp::ilp {
 }
 
 namespace ggbp::heuristics {
-    std::vector<Vertex> greedy(Graph const &graph, int const r);
+    std::vector<Vertex> spontaneous_neighbors(Graph const &graph, int const r);
 
     std::vector<Vertex> unburned_neighbors(Graph const &graph, int const r);
 
