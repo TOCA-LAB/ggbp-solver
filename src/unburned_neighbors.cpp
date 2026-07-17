@@ -4,6 +4,8 @@
 
 #include "ggbp/ggbp.hpp"
 
+#include <iostream>
+
 using std::vector, std::forward_list;
 
 vector<Vertex> ggbp::heuristics::unburned_neighbors(Graph const &graph, int const r) {
@@ -12,7 +14,7 @@ vector<Vertex> ggbp::heuristics::unburned_neighbors(Graph const &graph, int cons
     int n_burning = 0;
     vector<int> burning(n_vertices, 0);
 
-    vector<int> num_burning_neighbors(n_vertices);
+    vector<unsigned> num_burning_neighbors(n_vertices);
 
     vector<int> burning_sequence;
 
@@ -39,18 +41,19 @@ vector<Vertex> ggbp::heuristics::unburned_neighbors(Graph const &graph, int cons
         }
 
         int max_vertex = 0;
-        int max_neighbors = 0;
+        unsigned max_neighbors = 0;
 
         for (int u = 0; u < n_vertices; u++) {
-            if (graph.degree(u) - num_burning_neighbors[u] > max_neighbors && !burning[u] && !in_to_burn[u]) {
+            if ((graph.degree(u) - num_burning_neighbors[u]) >= max_neighbors && !burning[u] && !in_to_burn[u]) {
                 max_vertex = u;
                 max_neighbors = graph.degree(u) - num_burning_neighbors[u];
             }
         }
-
+        
         burning_sequence.push_back(max_vertex);
         burning[max_vertex] = 1;
         n_burning++;
+        
     
         for (auto u : graph.neighbors(max_vertex)) {
             num_burning_neighbors[u]++;
