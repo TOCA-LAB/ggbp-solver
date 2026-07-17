@@ -18,7 +18,7 @@ using std::chrono::duration;
 using std::chrono::seconds;
 
 int main(int argc, char* argv[]) {
-    argparse::ArgumentParser program("GGBP-Greedy");
+    argparse::ArgumentParser program("GGBP-Spontaneous");
 
     std::string graph_file_path;
     program.add_argument("file_path")

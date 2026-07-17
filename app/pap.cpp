@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     using std::chrono::duration;
     using std::chrono::seconds;
 
-    argparse::ArgumentParser program("GGBP-Naive");
+    argparse::ArgumentParser program("GGBP-PAP");
 
     std::string graph_file_path;
     program.add_argument("file_path")
