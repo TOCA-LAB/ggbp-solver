@@ -131,7 +131,7 @@ void brkga(Graph const &graph, const int r, BRKGAParams params, vector<int> &bur
         algorithm.evolve();	// evolve the population for one generation
         int fitness = algorithm.getBestFitness();
         
-        if (params.verbose == true) {
+        if (params.verbose) {
             cout << "Generation " << generation + 1 << " best solution found has objective value = "
                  << fitness << endl;
         }

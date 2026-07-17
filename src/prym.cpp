@@ -187,13 +187,13 @@ void solve_prym(Graph &graph, int B, vector<int> &temp_burning_sequence, vector<
         temp_burning_sequence.clear();
         auto opt_status = model.get(GRB_IntAttr_Status);
         if(opt_status == 2) {
-            for(int j = 0; j < B; j++)
-                for(int i = 0; i < n_vertices; i++)
+            for(int j = 0; j < B; j++) {
+                for(int i = 0; i < n_vertices; i++) {
                     if(vars_x[i][j].get(GRB_DoubleAttr_X) > 0.5) {
                         temp_burning_sequence.push_back(i);
-                        cout << i << " " << endl;
                     }
-            cout << endl;
+                }
+            }
         } else if (opt_status == GRB_TIME_LIMIT) {
             err_info.error = true;
             

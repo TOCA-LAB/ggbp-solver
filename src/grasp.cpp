@@ -151,7 +151,6 @@ vector<int> construct(Graph const &graph, int r, default_random_engine &e) {
 
 void local_search(vector<int>& burning_sequence, Graph const &graph, int r) {
     int n_vertices = graph.order();
-    // cout<< burning_sequence.size() << endl;
 
     bool changed = true;
     
@@ -169,8 +168,6 @@ void local_search(vector<int>& burning_sequence, Graph const &graph, int r) {
             temp_burning_sequence = burning_sequence;
             temp_burning_sequence.erase(temp_burning_sequence.begin() + i);
 
-            // println("{}", burning_sequence);
-            // println("{}", temp_burning_sequence);
             vector<int> history;
             bool valid_sequence = ggbp::utils::burning_history(graph, r, temp_burning_sequence, history);
 
@@ -194,10 +191,8 @@ void local_search(vector<int>& burning_sequence, Graph const &graph, int r) {
         in_sequence[u] = true;
     }
 
-    // Qual k escolher?
     int k = (n_vertices - burning_sequence.size()) / 10;
 
-    // Talvez quickselect?
     auto cmp = [&graph](int left, int right) { return (graph.degree(left) > graph.degree(right)); };
 
     vector<int> vertex_queue;
@@ -261,7 +256,9 @@ void grasp(
     int best = graph.order();
 
     for (int i = 0; i < max_it; i++) {
-        cout << "Iteration " << i+1 << endl;
+        if (verbose)
+            cout << "Iteration " << i+1 << endl;
+
         temp_burning_sequence = construct(graph, r, e);
 
         local_search(temp_burning_sequence, graph, r);
@@ -271,7 +268,9 @@ void grasp(
         else if (temp_burning_sequence.size() < burning_sequence.size())
             swap(temp_burning_sequence, burning_sequence);
         
-        cout << "Best: " << burning_sequence.size() << endl;
+        if (verbose)
+            cout << "Best: " << burning_sequence.size() << endl;
+
         iters.push_back(burning_sequence.size());
 
         if (iters[i] < best) {

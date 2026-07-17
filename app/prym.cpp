@@ -91,13 +91,7 @@ int main(int argc, char* argv[]) {
     duration<double, std::milli> ms_double = t2 - t1;
 
     cout << std::format("graph: {}, n = {}, m = {}\n", graph_name, graph.order(), graph.size())
-         << std::format("runtime = {}", ms_double.count() / 1000) << endl
-         << std::format("b(G) = {}\n", burning_sequence.size());
-
-    cout << "burning Sequence = ";
-    for (auto u : burning_sequence)
-        cout << u + 1 << " ";
-    cout << endl;
+         << std::format("runtime = {}", ms_double.count() / 1000) << endl;
 
     if (!err_info.error) {     
         cout << std::format("b(G) = {}\n", burning_sequence.size());

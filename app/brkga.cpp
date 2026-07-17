@@ -36,12 +36,13 @@ int main(int argc, char* argv[]) {
         .default_value(std::string{"mtx"})
         .choices("mtx", "g6")
         .store_into(format);
-
+        
+    ggbp::brkga::BRKGAParams params;
     program.add_argument("-V", "--verbose")
         .help("Increase output verbosity")
-        .flag();
+        .flag()
+        .store_into(params.verbose);
 
-    ggbp::brkga::BRKGAParams params;
     program.add_argument("-p", "--pop")
         .help("Define the size of each population")
         .default_value(100U)
