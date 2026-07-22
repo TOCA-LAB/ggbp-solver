@@ -2,7 +2,6 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
-#include <format>
 #include <string>
 
 #include <argparse/argparse.hpp>
@@ -90,11 +89,11 @@ int main(int argc, char* argv[]) {
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;
 
-    cout << std::format("graph: {}, n = {}, m = {}\n", graph_name, graph.order(), graph.size())
-         << std::format("runtime = {}", ms_double.count() / 1000) << endl;
+    cout << "graph: " << graph_name << ", n = " << graph.order() << ", m = " << graph.size() << "\n"
+         << "runtime = " << ms_double.count() / 1000 << endl;
 
     if (!err_info.error) {     
-        cout << std::format("b(G) = {}\n", burning_sequence.size());
+        cout << "b(G) = " << burning_sequence.size() << "\n";
 
         cout << "burning Sequence = ";
         for (auto u : burning_sequence)

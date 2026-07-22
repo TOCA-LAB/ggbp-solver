@@ -99,11 +99,11 @@ int main(int argc, char* argv[]) {
     duration<double, std::milli> ms_double = t2 - t1;
 
 
-    cout << std::format("graph: {}, n = {}, m = {}\n", graph_name, graph.order(), graph.size())
-         << std::format("runtime = {}", ms_double.count() / 1000) << endl;
+    cout << "graph: " << graph_name << ", n = " << graph.order() << ", m = " << graph.size() << "\n"
+         << "runtime = " << ms_double.count() / 1000 << endl;
 
     if (!err_info.error) {     
-        cout << std::format("|S| = {}\n", r, seed_set.size());
+        cout << "|S|_" << r << " = " << seed_set.size() << "\n";
 
         cout << "seed set = ";
         for (auto u : seed_set)
