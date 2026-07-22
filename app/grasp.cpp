@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) {
 
     unsigned seed;
 
-    if (program.present("-S")) {
+    if (program.is_used("-S")) {
         seed = program.get<unsigned>("-S");
     } else {
         seed = std::chrono::system_clock::now().time_since_epoch().count();
