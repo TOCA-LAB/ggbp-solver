@@ -191,7 +191,7 @@ void local_search(vector<int>& burning_sequence, Graph const &graph, int r) {
         in_sequence[u] = true;
     }
 
-    int k = (n_vertices - burning_sequence.size()) / 10;
+    int k = (n_vertices - burning_sequence.size()) / 10 + (n_vertices - burning_sequence.size() < 10 ? 2 : 0);
 
     auto cmp = [&graph](int left, int right) { return (graph.degree(left) > graph.degree(right)); };
 
@@ -258,7 +258,7 @@ void grasp(
     for (int i = 0; i < max_it; i++) {
         if (verbose)
             cout << "Iteration " << i+1 << endl;
-
+        
         temp_burning_sequence = construct(graph, r, e);
 
         local_search(temp_burning_sequence, graph, r);
