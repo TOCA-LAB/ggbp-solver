@@ -85,7 +85,8 @@ int main(int argc, char* argv[]) {
         .store_into(params.MAXT);
     
     program.add_argument("-S", "--seed")
-        .help("Define seed for the RNG");
+        .help("Define seed for the RNG")
+        .scan<'u', unsigned>();
 
     program.add_argument("--json")
         .help("Choose the output json file");
@@ -118,7 +119,7 @@ int main(int argc, char* argv[]) {
     
     std::string graph_name = fs::path(graph_file_path).stem().string();
 
-    if (program.present("-S")) {
+    if (program.is_used("-S")) {
         params.seed = program.get<unsigned>("-S");
     } else {
         params.seed = std::chrono::system_clock::now().time_since_epoch().count();
