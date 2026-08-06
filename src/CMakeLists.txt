@@ -14,6 +14,11 @@ set(GGBP_SOURCES
 
 add_library(ggbp STATIC ${GGBP_SOURCES}
     brkga.cpp)
+
+if(NOT ENABLE_CONTRACTS)
+    target_compile_definitions(ggbp PUBLIC NO_CONTRACTS=1)
+endif()
+
 target_include_directories(ggbp
     PUBLIC ${PROJECT_SOURCE_DIR}/include ${GUROBI_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
     PRIVATE ${PROJECT_SOURCE_DIR}/src

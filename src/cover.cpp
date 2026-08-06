@@ -203,7 +203,7 @@ void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_se
 
 void find_burning_sequence(Graph const &g, int const r, int &LB, int &UB, vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info) {
     PRECONDITION(r >= 1);
-    PRECONDITION(G.order() >= r);
+    PRECONDITION(g.order() >= r);
 
     vector<int> temp_burning_sequence;
 

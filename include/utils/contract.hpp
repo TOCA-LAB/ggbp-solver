@@ -9,9 +9,7 @@
 #include <algorithm>
 #include <vector>
 
-#define NO_CONTRACTS  1
-
-// Enable/disable contracts via macro (define NO_CONTRACTS para desabilitar)
+// Define NO_CONTRACTS in the build configuration to disable runtime checks.
 #if !defined(NO_CONTRACTS)
 #define CONTRACT_CHECK(expr, kind) \
      do { \
