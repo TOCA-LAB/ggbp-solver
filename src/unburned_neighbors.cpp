@@ -1,72 +1,143 @@
+#include <optional>
+#include <stdexcept>
+#include <utility>
 #include <vector>
-#include <forward_list>
-#include "ggbp/graph.hpp"
 
 #include "ggbp/ggbp.hpp"
+#include "ggbp/graph.hpp"
 
-#include <iostream>
+namespace {
 
-using std::vector, std::forward_list;
+struct BurningState {
+    explicit BurningState(const Graph::size_type order)
+        : burned(order, false),
+          burned_neighbor_count(order, 0),
+          in_current_frontier(order, false) {}
 
-vector<Vertex> ggbp::heuristics::unburned_neighbors(Graph const &graph, int const r) {
-    int n_vertices = graph.order();
-    
-    int n_burning = 0;
-    vector<int> burning(n_vertices, 0);
+    std::vector<bool> burned;
+    std::vector<unsigned> burned_neighbor_count;
+    std::vector<Vertex> current_frontier;
+    std::vector<bool> in_current_frontier;
+    Graph::size_type burned_count = 0;
+};
 
-    vector<unsigned> num_burning_neighbors(n_vertices);
+std::optional<Vertex> best_unscheduled_source(const Graph& graph,
+                                               const BurningState& state) {
+    std::optional<Vertex> best_source;
+    Graph::size_type best_unburned_neighbors = 0;
 
-    vector<int> burning_sequence;
-
-    forward_list<int> to_burn;
-
-    while (n_burning < n_vertices) {
-        forward_list<int> next_to_burn;
-        vector<int> in_to_burn(n_vertices, 0);
-
-        for (auto v : to_burn) {
-            burning[v] = 1;
-            n_burning++;
-        }
-        
-        for (auto v : to_burn) {
-            for (auto u : graph.neighbors(v)) {
-                num_burning_neighbors[u]++;    
-
-                if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
-                    next_to_burn.push_front(u);
-                    in_to_burn[u] = 1;
-                }
-            }
+    for (Vertex vertex = 0; static_cast<Graph::size_type>(vertex) < graph.order(); ++vertex) {
+        if (state.burned[vertex] || state.in_current_frontier[vertex]) {
+            continue;
         }
 
-        int max_vertex = 0;
-        unsigned max_neighbors = 0;
-
-        for (int u = 0; u < n_vertices; u++) {
-            if ((graph.degree(u) - num_burning_neighbors[u]) >= max_neighbors && !burning[u] && !in_to_burn[u]) {
-                max_vertex = u;
-                max_neighbors = graph.degree(u) - num_burning_neighbors[u];
-            }
+        const auto unburned_neighbors =
+            graph.degree(vertex) - state.burned_neighbor_count[vertex];
+        if (!best_source || unburned_neighbors >= best_unburned_neighbors) {
+            best_source = vertex;
+            best_unburned_neighbors = unburned_neighbors;
         }
-        
-        burning_sequence.push_back(max_vertex);
-        burning[max_vertex] = 1;
-        n_burning++;
-        
-    
-        for (auto u : graph.neighbors(max_vertex)) {
-            num_burning_neighbors[u]++;
-            
-            if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
-                next_to_burn.push_front(u);
-                in_to_burn[u] = 1;
-            }
-        }
-        
-        to_burn = next_to_burn;
-        next_to_burn.clear();
     }
 
-    return burning_sequence;
+    return best_source;
+}
+
+Vertex choose_source(const Graph& graph, const BurningState& state) {
+    if (const auto source = best_unscheduled_source(graph, state)) {
+        return *source;
+    }
+
+    for (const Vertex vertex : state.current_frontier) {
+        if (!state.burned[vertex]) {
+            return vertex;
+        }
+    }
+
+    throw std::logic_error(
+        "unburned vertex exists but no source can be selected");
+}
+
+std::vector<Vertex> burning_vertices(const Vertex source,
+                                     const BurningState& state) {
+    std::vector<Vertex> burning_now;
+    burning_now.reserve(state.current_frontier.size() + 1);
+    burning_now.push_back(source);
+
+    for (const Vertex vertex : state.current_frontier) {
+        if (vertex != source && !state.burned[vertex]) {
+            burning_now.push_back(vertex);
+        }
+    }
+
+    return burning_now;
+}
+
+void mark_as_burned(const std::vector<Vertex>& burning_now,
+                    BurningState& state) {
+    for (const Vertex vertex : burning_now) {
+        if (!state.burned[vertex]) {
+            state.burned[vertex] = true;
+            ++state.burned_count;
+        }
+    }
+}
+
+void build_next_frontier(const Graph& graph,
+                         const int threshold,
+                         const std::vector<Vertex>& burning_now,
+                         BurningState& state) {
+    std::vector<Vertex> next_frontier;
+    std::vector<bool> in_next_frontier(graph.order(), false);
+
+    for (const Vertex vertex : burning_now) {
+        for (const Vertex neighbor : graph.neighbors(vertex)) {
+            if (state.burned[neighbor]) {
+                continue;
+            }
+
+            ++state.burned_neighbor_count[neighbor];
+            if (state.burned_neighbor_count[neighbor] >=
+                    static_cast<unsigned>(threshold) &&
+                !in_next_frontier[neighbor]) {
+                in_next_frontier[neighbor] = true;
+                next_frontier.push_back(neighbor);
+            }
+        }
+    }
+
+    state.current_frontier = std::move(next_frontier);
+    state.in_current_frontier = std::move(in_next_frontier);
+}
+
+void burn_round(const Graph& graph,
+                const int threshold,
+                const Vertex source,
+                BurningState& state) {
+    const auto burning_now = burning_vertices(source, state);
+    mark_as_burned(burning_now, state);
+    build_next_frontier(graph, threshold, burning_now, state);
+}
+
+} // namespace
+
+std::vector<Vertex>
+ggbp::heuristics::unburned_neighbors(const Graph& graph, const int r) {
+    if (r < 1) {
+        throw std::invalid_argument("r must be positive");
+    }
+    if (graph.order() == 0) {
+        return {};
+    }
+
+    BurningState state(graph.order());
+    std::vector<Vertex> sequence;
+    sequence.reserve(graph.order());
+
+    while (state.burned_count < graph.order()) {
+        const Vertex source = choose_source(graph, state);
+        sequence.push_back(source);
+        burn_round(graph, r, source, state);
+    }
+
+    return sequence;
 }
