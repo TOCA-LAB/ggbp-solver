@@ -247,7 +247,8 @@ void run_prym(Graph &graph, vector<int> &burning_sequence, GurobiParams params, 
     initial_covered_vertices = temp_burning_sequence;
 
     UB = int(temp_burning_sequence.size());
-    LB = ceil((2.0*UB)/3) + 0.5;
+    LB = (UB + 4) / 3; 
+
 
     if (params.verbose)
         cout << "BFF-d found a burning sequence of length " << UB << endl << endl;

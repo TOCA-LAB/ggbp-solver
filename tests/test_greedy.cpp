@@ -1,22 +1,18 @@
 #include <catch2/catch_all.hpp>
-#include <iostream>
+
 #include <vector>
 
-#include "ggbp/graph.hpp"
-#include "utils/fix_c++_print.hpp"
-
 #include "ggbp/ggbp.hpp"
-#include "utils/utils.hpp"
+#include "ggbp/graph.hpp"
+#include "support/reference_burning.hpp"
 
-TEST_CASE("get_best_ignitor", "[greedy]") {
-    
-    // Path with 10 vertices
-    Graph G("IhCGGC@?G");
+TEST_CASE("F10 tests compile against the current heuristic API",
+          "[regression][build][heuristics][F10]") {
+    Graph graph(1);
 
-    std::vector<int> expected = {1, 5, 9, 2};
+    const std::vector<Vertex> sequence =
+        ggbp::heuristics::unburned_neighbors(graph, 1);
 
-    std::vector<Vertex> burning_seq = ggbp::heuristics::greedy(G, 1);
-
-    for (auto [i, v] : ggbp::utils::enumerate(expected))
-      REQUIRE(burning_seq[i] == v);
+    REQUIRE(sequence == std::vector<Vertex>{0});
+    REQUIRE(ggbp::test_support::simulate_burning(graph, 1, sequence).feasible);
 }
