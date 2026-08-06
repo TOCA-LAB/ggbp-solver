@@ -2,6 +2,7 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <string>
 
 #include <argparse/argparse.hpp>
@@ -99,6 +100,14 @@ int main(int argc, char* argv[]) {
         std::cerr << program;
         std::exit(1);
     }
+
+    if (params.linear_relax && !params.opt) {
+        std::cerr
+            << "--linear-relax requires --optimization because an LP "
+               "relaxation cannot certify feasibility in the binary search"
+            << endl;
+        return 2;
+    }
     
     auto t1 = high_resolution_clock::now();
 
@@ -122,6 +131,7 @@ int main(int argc, char* argv[]) {
     
     vector<int> burning_sequence;
     ggbp::ilp::GurobiErrorInfo err_info;
+    std::optional<double> relaxation_bound;
     
     int UB, LB;
     if (program.is_used("-lb")) {
@@ -137,12 +147,16 @@ int main(int argc, char* argv[]) {
     }
 
     if (params.opt) {
-        ggbp::ilp::naive::solve_ilp(graph, r, UB, params, burning_sequence, err_info);
+        relaxation_bound = ggbp::ilp::naive::solve_ilp(
+            graph, r, UB, params, burning_sequence, err_info);
     
         if (err_info.error) {
             UB = err_info.ObjVal;
             LB = err_info.ObjBound;
-        } else {
+        } else if (params.linear_relax && !relaxation_bound) {
+            err_info.error = true;
+            err_info.msg = "solver returned no LP relaxation value";
+        } else if (!params.linear_relax) {
             UB = burning_sequence.size();
             LB = burning_sequence.size();
         }
@@ -156,15 +170,17 @@ int main(int argc, char* argv[]) {
     cout << "graph: " << graph_name << ", n = " << graph.order() << ", m = " << graph.size() << "\n"
          << "runtime = " << ms_double.count() / 1000 << endl;
 
-    if (!err_info.error) {     
+    if (err_info.error) {
+        cout << "Failed to compute burning sequence. Error: " << err_info.msg << endl;
+    } else if (relaxation_bound) {
+        cout << "LP relaxation lower bound = " << *relaxation_bound << "\n";
+    } else {
         cout << "b(G) = " << burning_sequence.size() << "\n";
 
         cout << "burning Sequence = ";
         for (auto u : burning_sequence)
             cout << u + 1 << " ";
         cout << endl;
-    } else {
-        cout << "Failed to compute burning sequence. Error: " << err_info.msg << endl;
     }
 
 
@@ -182,12 +198,23 @@ int main(int argc, char* argv[]) {
         j["instance"] = graph_name;
         j["order"] = graph.order();
         j["size"] = graph.size();
-        j["burning_number"] = burning_sequence.size();
-        j["burning_sequence"] = burning_sequence;
         j["execution_time"] = ms_double.count()/1000;
-        j["upper_bound"] = UB;
-        j["lower_bound"] = LB;
         j["algorithm"] = "naive";
+
+        if (params.linear_relax) {
+            j["solution_kind"] = "lp_relaxation_bound";
+            j["upper_bound"] = UB;
+            if (relaxation_bound && !err_info.error) {
+                j["relaxation_bound"] = *relaxation_bound;
+                j["lower_bound"] = *relaxation_bound;
+            }
+        } else {
+            j["solution_kind"] = "integer_sequence";
+            j["burning_number"] = burning_sequence.size();
+            j["burning_sequence"] = burning_sequence;
+            j["upper_bound"] = UB;
+            j["lower_bound"] = LB;
+        }
 
         j["completed"] = !err_info.error;
 

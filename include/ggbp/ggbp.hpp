@@ -5,6 +5,7 @@
 #include <tuple>
 #include <string>
 #include <random>
+#include <optional>
 
 #include "ggbp/graph.hpp"
 
@@ -69,8 +70,8 @@ namespace ggbp::ilp {
 
     struct GurobiErrorInfo {
         bool error = false;
-        double ObjVal;
-        double ObjBound;
+        double ObjVal = 0.0;
+        double ObjBound = 0.0;
         std::string msg;
     };
         
@@ -88,7 +89,9 @@ namespace ggbp::ilp {
             LPParams() = default;
         };
         
-        void solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info);
+        // Returns the LP objective only for a successful linear relaxation.
+        // Integer solves return their certificate through burning_sequence.
+        std::optional<double> solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info);
 
         void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams params, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info);    
     }

@@ -83,8 +83,18 @@ void add_active_neighborhood_logic(GRBModel &model, Graph const &g, vector<vecto
     }
 }
 
-void solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info) {
+std::optional<double> solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info) {
     int const n_vertices = g.order();
+
+    burning_sequence.clear();
+    err_info = {};
+
+    if (params.linear_relax && !params.opt) {
+        err_info.error = true;
+        err_info.msg =
+            "linear relaxation requires the optimization formulation";
+        return std::nullopt;
+    }
 
     char vtype = GRB_BINARY;
 
@@ -213,8 +223,11 @@ void solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<
 
         int opt_status = model.get(GRB_IntAttr_Status);
 
-        burning_sequence.clear();
         if (opt_status == GRB_OPTIMAL) {
+            if (params.linear_relax) {
+                return model.get(GRB_DoubleAttr_ObjVal);
+            }
+
             for(int t = 1; t < B+1; t++) {
                 for(int u = 0; u < n_vertices; u++) {
                     if (y[u][t].get(GRB_DoubleAttr_X) > 0.5) {
@@ -261,11 +274,22 @@ void solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<
         err_info.ObjVal = g.order();
         err_info.ObjBound = 0;
     }
+
+    return std::nullopt;
 }
 
 void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams params, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info) {
     PRECONDITION(r >= 1);
     PRECONDITION(G.order() >= r);
+
+    if (params.linear_relax) {
+        burning_sequence.clear();
+        err_info = {};
+        err_info.error = true;
+        err_info.msg =
+            "linear relaxation cannot certify binary-search feasibility";
+        return;
+    }
 
     vector<int> temp_burning_sequence;
 
@@ -280,7 +304,7 @@ void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams par
             cout << "Trying to find a burning sequence of length " << B << "." << endl;
         }
 
-        solve_ilp(g, r, B, params, temp_burning_sequence, err_info);
+        (void)solve_ilp(g, r, B, params, temp_burning_sequence, err_info);
 
         if (err_info.error)
             return;
