@@ -52,6 +52,7 @@ private:
     std::vector<bool> burned_;
     std::vector<unsigned> burned_neighbor_counts_;
     std::vector<Vertex> frontier_;
+    std::vector<Vertex> next_frontier_;
     std::vector<bool> in_frontier_;
     std::vector<int> burned_rounds_;
     std::vector<std::size_t> burned_per_turn_;
@@ -60,7 +61,6 @@ private:
     std::optional<std::size_t> completion_turns_;
 
     void validate_vertex(Vertex vertex) const;
-    void rebuild_frontier();
 };
 
 [[nodiscard]] BurningResult simulate_burning(

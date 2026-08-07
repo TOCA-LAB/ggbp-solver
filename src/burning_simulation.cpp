@@ -33,22 +33,6 @@ void BurningState::validate_vertex(const Vertex vertex) const {
     }
 }
 
-void BurningState::rebuild_frontier() {
-    frontier_.clear();
-    in_frontier_.assign(graph_->order(), false);
-
-    for (Vertex vertex = 0;
-         static_cast<Graph::size_type>(vertex) < graph_->order();
-         ++vertex) {
-        if (!burned_[vertex] &&
-            burned_neighbor_counts_[vertex] >=
-                static_cast<unsigned>(threshold_)) {
-            frontier_.push_back(vertex);
-            in_frontier_[vertex] = true;
-        }
-    }
-}
-
 void BurningState::burn(const Vertex source) {
     validate_vertex(source);
 
@@ -56,34 +40,58 @@ void BurningState::burn(const Vertex source) {
         throw std::overflow_error("burning round does not fit in an int");
     }
 
-    std::vector<Vertex> burning_now;
-    burning_now.reserve(frontier_.size() + 1);
-    if (!burned_[source]) {
-        burning_now.push_back(source);
+    const int current_round = static_cast<int>(turn_count_);
+    const bool source_burns = !burned_[source];
+    std::size_t burned_this_turn = 0;
+
+    if (source_burns) {
+        burned_[source] = true;
+        burned_rounds_[source] = current_round;
+        ++burned_count_;
+        ++burned_this_turn;
     }
+
     for (const Vertex vertex : frontier_) {
-        if (!burned_[vertex] && vertex != source) {
-            burning_now.push_back(vertex);
+        in_frontier_[vertex] = false;
+        if (!burned_[vertex]) {
+            burned_[vertex] = true;
+            burned_rounds_[vertex] = current_round;
+            ++burned_count_;
+            ++burned_this_turn;
         }
     }
 
-    for (const Vertex vertex : burning_now) {
-        burned_[vertex] = true;
-        burned_rounds_[vertex] = static_cast<int>(turn_count_);
-        ++burned_count_;
-    }
-
-    for (const Vertex vertex : burning_now) {
+    next_frontier_.clear();
+    const auto propagate_from = [this](const Vertex vertex) {
         for (const Vertex neighbor : graph_->neighbors(vertex)) {
-            if (!burned_[neighbor]) {
-                ++burned_neighbor_counts_[neighbor];
+            if (burned_[neighbor]) {
+                continue;
+            }
+
+            auto& count = burned_neighbor_counts_[neighbor];
+            ++count;
+            if (count == static_cast<unsigned>(threshold_)) {
+                in_frontier_[neighbor] = true;
+                next_frontier_.push_back(neighbor);
             }
         }
+    };
+
+    if (source_burns) {
+        propagate_from(source);
+    }
+    for (const Vertex vertex : frontier_) {
+        if (vertex != source) {
+            propagate_from(vertex);
+        }
     }
 
-    burned_per_turn_.push_back(burning_now.size());
+    std::sort(next_frontier_.begin(), next_frontier_.end());
+    frontier_.swap(next_frontier_);
+    next_frontier_.clear();
+
+    burned_per_turn_.push_back(burned_this_turn);
     ++turn_count_;
-    rebuild_frontier();
 
     if (complete() && !completion_turns_) {
         completion_turns_ = turn_count_;
