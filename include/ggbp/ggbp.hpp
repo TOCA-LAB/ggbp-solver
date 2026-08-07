@@ -122,6 +122,13 @@ namespace ggbp::heuristics {
 
     std::vector<Vertex> unburned_neighbors(Graph const &graph, int const r);
 
+    // Builds a feasible burning sequence while prioritizing the supplied
+    // dominating-set vertices. This overload does not invoke Gurobi.
+    std::vector<Vertex> dominating(
+        Graph const &graph,
+        int r,
+        std::vector<Vertex> const &dominating_set);
+
     std::vector<Vertex> dominating(Graph const &graph, int r, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiErrorInfo &err_info);
 }
 

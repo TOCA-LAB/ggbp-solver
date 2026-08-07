@@ -16,6 +16,11 @@ BurningState::BurningState(const Graph& graph, const int threshold)
     if (threshold < 1) {
         throw std::invalid_argument("burning threshold must be positive");
     }
+    if (graph.order() > 0 &&
+        static_cast<Graph::size_type>(threshold) > graph.order()) {
+        throw std::invalid_argument(
+            "burning threshold cannot exceed the graph order");
+    }
     if (graph.order() == 0) {
         completion_turns_ = 0;
     }

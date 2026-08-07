@@ -1,15 +1,17 @@
 #include <vector>
-#include <forward_list>
+#include <optional>
 #include <string>
 #include <iostream>
 #include <exception>
+#include <stdexcept>
+#include "ggbp/burning_simulation.hpp"
 #include "ggbp/graph.hpp"
 #include "gurobi_c++.h"
 
 #include "ggbp/ggbp.hpp"
 
 namespace ggbp::heuristics {
-using std::vector, std::forward_list;
+using std::vector;
 
 void min_dominating_set(Graph const &graph, vector<int> &dominating_set, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiErrorInfo &err_info) {
     try {
@@ -93,129 +95,124 @@ void min_dominating_set(Graph const &graph, vector<int> &dominating_set, ggbp::i
     }
 }
 
-vector<Vertex> dominating(Graph const &graph, int r, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiErrorInfo &err_info) {
-    vector<int> dominating_set;
+namespace {
 
+using simulation::BurningState;
+
+std::optional<Vertex> next_preferred_source(
+    const vector<Vertex>& preferred_sources,
+    std::size_t& next_preferred,
+    const BurningState& state) {
+    while (next_preferred < preferred_sources.size()) {
+        const Vertex source = preferred_sources[next_preferred++];
+        if (!state.is_burned(source) && !state.is_in_frontier(source)) {
+            return source;
+        }
+    }
+    return std::nullopt;
+}
+
+std::size_t newly_scheduled_neighbors(
+    const Graph& graph,
+    const Vertex source,
+    const BurningState& state) {
+    std::size_t count = 0;
+    for (const Vertex neighbor : graph.neighbors(source)) {
+        if (!state.is_burned(neighbor) &&
+            !state.is_in_frontier(neighbor) &&
+            state.burned_neighbor_count(neighbor) + 1 ==
+                static_cast<unsigned>(state.threshold())) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+std::optional<Vertex> best_completion_source(
+    const Graph& graph,
+    const BurningState& state) {
+    std::optional<Vertex> best_source;
+    std::size_t best_score = 0;
+
+    for (Vertex vertex = 0;
+         static_cast<Graph::size_type>(vertex) < graph.order();
+         ++vertex) {
+        if (state.is_burned(vertex) || state.is_in_frontier(vertex)) {
+            continue;
+        }
+
+        const std::size_t score =
+            newly_scheduled_neighbors(graph, vertex, state);
+        if (!best_source || score > best_score) {
+            best_source = vertex;
+            best_score = score;
+        }
+    }
+    return best_source;
+}
+
+std::optional<Vertex> first_frontier_vertex(const BurningState& state) {
+    for (const Vertex vertex : state.frontier()) {
+        if (!state.is_burned(vertex)) {
+            return vertex;
+        }
+    }
+    return std::nullopt;
+}
+
+} // namespace
+
+vector<Vertex> dominating(
+    const Graph& graph,
+    const int r,
+    const vector<Vertex>& dominating_set) {
+
+    BurningState state(graph, r);
+    for (const Vertex vertex : dominating_set) {
+        (void)state.is_burned(vertex);
+    }
+
+    vector<Vertex> burning_sequence;
+    burning_sequence.reserve(graph.order());
+    std::size_t next_preferred = 0;
+
+    while (!state.complete()) {
+        auto source = next_preferred_source(
+            dominating_set, next_preferred, state);
+        if (!source) {
+            source = best_completion_source(graph, state);
+        }
+        if (!source) {
+            source = first_frontier_vertex(state);
+        }
+        if (!source) {
+            throw std::logic_error(
+                "Dominating could not select an unburned source");
+        }
+
+        burning_sequence.push_back(*source);
+        state.burn(*source);
+    }
+
+    if (!simulation::simulate_burning(graph, r, burning_sequence).feasible) {
+        throw std::logic_error(
+            "Dominating produced an invalid burning sequence");
+    }
+    return burning_sequence;
+}
+
+vector<Vertex> dominating(
+    const Graph& graph,
+    const int r,
+    const ggbp::ilp::GurobiParams params,
+    ggbp::ilp::GurobiErrorInfo& err_info) {
+    vector<int> dominating_set;
+    err_info = {};
     min_dominating_set(graph, dominating_set, params, err_info);
 
     if (err_info.error) {
         return {};
     }
-
-    int n_vertices = graph.order();
-    vector<Vertex> burning_sequence;
-
-    int n_burning = 0;
-    vector<int> burning(n_vertices);
-    vector<int> num_burning_neighbors(n_vertices);
-
-    forward_list<int> to_burn;
-    forward_list<int> next_to_burn;
-    vector<int> in_to_burn(n_vertices, 0);
-
-    vector<int>::iterator curr_vertex = dominating_set.begin();
-    while (n_burning < n_vertices && curr_vertex != dominating_set.end()) {
-        for (auto v : to_burn) {
-            burning[v] = 1;
-            n_burning++;
-        }
-        
-        for (auto v : to_burn) {
-            for (auto u : graph.neighbors(v)) {
-                num_burning_neighbors[u]++;
-                
-                if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
-                    next_to_burn.push_front(u);
-                    in_to_burn[u] = 1;
-                }
-            }
-        }
-
-        while (curr_vertex != dominating_set.end() && (burning[*curr_vertex] || in_to_burn[*curr_vertex])) {
-            curr_vertex++;
-        }
-    
-        if (curr_vertex == dominating_set.end())
-            break;
-                
-        burning_sequence.push_back(*curr_vertex);
-        burning[*curr_vertex] = 1;
-        n_burning++;
-        
-        for (auto u : graph.neighbors(*curr_vertex)) {
-            num_burning_neighbors[u]++;
-            
-            if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
-                next_to_burn.push_front(u);
-                in_to_burn[u] = 1;
-            }
-        }
-
-        curr_vertex++;
-
-        in_to_burn = vector<int>(n_vertices, 0);
-        to_burn = next_to_burn;
-        next_to_burn.clear();
-    }
-
-    to_burn.clear();
-    next_to_burn.clear();
-
-    while (n_burning < n_vertices) {
-
-        for (auto v : to_burn) {
-            burning[v] = 1;
-            n_burning++;
-        }
-        
-        for (auto v : to_burn) {
-            for (auto u : graph.neighbors(v)) {
-                num_burning_neighbors[u]++;
-                
-                if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
-                    next_to_burn.push_front(u);
-                    in_to_burn[u] = 1;
-                }
-            }
-        }
-        
-        int max_vertex = 0;
-        int max_neighbors = -1;
-
-        for (int u = 0; u < n_vertices; u++) {
-            if (!burning[u] && !in_to_burn[u]) {
-                int new_spontaneous = 0;
-                for (auto v : graph.neighbors(u)) {
-                    if (num_burning_neighbors[v] == r-1 && !burning[v] && !in_to_burn[v]) {
-                        new_spontaneous++;
-                    }
-                }
-
-                if (new_spontaneous > max_neighbors) {
-                    max_vertex = u;
-                    max_neighbors = new_spontaneous;
-                }
-            }
-        }
-
-        burning_sequence.push_back(max_vertex);
-        burning[max_vertex] = 1;
-        n_burning++;
-
-        for (auto u : graph.neighbors(max_vertex)) {
-            num_burning_neighbors[u]++;
-            
-            if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
-                next_to_burn.push_front(u);
-                in_to_burn[u] = 1;
-            }
-        }
-
-        in_to_burn = vector<int>(n_vertices, 0);
-        to_burn = next_to_burn;
-        next_to_burn.clear();
-    }
-
-    return burning_sequence;
+    return dominating(graph, r, dominating_set);
 }
 }
