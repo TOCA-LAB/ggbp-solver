@@ -23,8 +23,12 @@ int get_lower_bound(Graph const &g, int const r, bool verbose) {
     return count;
 }
 
-int get_upper_bound(Graph const &graph, int const r, bool verbose) {
-    ggbp::brkga::BRKGAParams params;
+int get_upper_bound(
+    Graph const &graph,
+    int const r,
+    bool const verbose,
+    unsigned const seed) {
+    ggbp::brkga::BRKGAParams params{};
     
     params.p = 60;
     params.MAX_GENS = 25;
@@ -33,10 +37,11 @@ int get_upper_bound(Graph const &graph, int const r, bool verbose) {
     params.rhoe = 0.70;	
     params.K = 2;
     params.MAXT = 2;
+    params.seed = seed;
     params.verbose = verbose;
 
     vector<int> burning_sequence, iters;
-    int first_best;
+    int first_best = -1;
 
     ggbp::brkga::brkga(graph, r, params, burning_sequence, iters, first_best);
 
