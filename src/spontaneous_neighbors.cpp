@@ -4,7 +4,8 @@
 #include <vector>
 #include <algorithm>
 #include <ranges>
-#include <map>
+#include <stdexcept>
+#include "ggbp/burning_simulation.hpp"
 #include "ggbp/graph.hpp"
 #include "utils/combinations.hpp"
 #include "utils/contract.hpp"
@@ -16,9 +17,6 @@ namespace ggbp::heuristics {
 
 using std::vector;
 using ggbp::utils::Combinations;
-using std::unordered_set;
-using std::map;
-using ggbp::utils::enumerate;
 
 constexpr int INF_INT = std::numeric_limits<int>::max();
 constexpr int NO_ROUND = -1;
@@ -119,40 +117,6 @@ choose_next_ignitor(MaxPQ& candidates, const vector<Vertex>& burning_order) {
     return it.vertex;
 }
 
-bool is_burning_sequence(const Graph& G, int r, vector<Vertex> burning_sequence) {
-    
-
-    vector<int> burned_round(G.order(), -1);
-    MinPQ pq;
-    map<Vertex, MinPQ::handle_type> idx_pq;
-
-    for (auto [i, u] : enumerate(burning_sequence)) {
-        idx_pq[u] = pq.push({static_cast<int>(i), u});
-    }
-
-    vector<int> nburned_neighbors(G.order(), 0);
-    while (!pq.empty()) {
-        auto [round, u] = pq.top();
-        pq.pop();
-        if (burned_round[u] != -1) 
-            continue;
-        burned_round[u] = round;
-        for (Vertex w : G.neighbors(u)) {
-            if (burned_round[w] == -1) {
-                nburned_neighbors[w] += 1;
-                if (nburned_neighbors[w] == r) {
-                    pq.push({round + 1, w});
-                }
-            }
-        }
-    }
-
-    for (Vertex u : G.vertices())
-        if (burned_round[u] == -1)
-            return false;
-    return true;
-}
-
 void 
 update_at_risk_neighbor_counts(const Graph& G, 
                                const int r, 
@@ -248,7 +212,10 @@ initialize_burning_state(const Graph& G,
 }
 
 vector<Vertex> spontaneous_neighbors(const Graph &G, const int r) {
-  PRECONDITION(r >= 1);
+  const simulation::BurningState initial_state(G, r);
+  if (initial_state.complete()) {
+    return {};
+  }
 
   logger.info(1) << "starting greedy...";
 
@@ -300,8 +267,12 @@ vector<Vertex> spontaneous_neighbors(const Graph &G, const int r) {
     }
   }
 
-  POSTCONDITION(is_burning_sequence(G, r, burning_sequence));
+  const auto validation =
+      simulation::simulate_burning(G, r, burning_sequence);
+  if (!validation.feasible) {
+    throw std::logic_error(
+        "Spontaneous produced a sequence that exceeds its horizon");
+  }
   return burning_sequence;
 }
 }
-

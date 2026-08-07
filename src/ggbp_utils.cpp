@@ -1,194 +1,57 @@
+#include <limits>
+#include <stdexcept>
 #include <vector>
-#include <forward_list>
-#include <algorithm>
-#include <cmath>
-#include <functional>
 
-#include "ggbp/graph.hpp"
-
+#include "ggbp/burning_simulation.hpp"
 #include "utils/utils.hpp"
 
 namespace ggbp::utils {
 
-using std::vector, std::forward_list;
-
-bool is_burning_sequence(Graph const &g, int r, vector<int> &burning_sequence, Vertex &unburned) {
-    int num_vertices = g.order();
-
-    vector<bool> in_sequence(num_vertices, false);
-    vector<bool> burned(num_vertices, false);
-    vector<int> num_burned_neighbors(num_vertices, 0);
-
-
-    forward_list<int> to_burn;
-    vector<bool> in_to_burn(num_vertices, false);
-    forward_list<int> next_to_burn;
-
-    for (auto u : burning_sequence) {
-        if (!burned[u]) {
-            burned[u] = true;
-
-            for (auto w : g.neighbors(u)) {
-                num_burned_neighbors[w]++;
-
-                if (!in_to_burn[w] && !burned[w] && num_burned_neighbors[w] >= r) {
-                    next_to_burn.push_front(w);
-                    in_to_burn[w] = true;
-                }
-            }
-        }
-
-        for (auto v : to_burn) {
-            if (!burned[v]) {
-                burned[v] = true;
-                for (auto w : g.neighbors(v)) {
-                    num_burned_neighbors[w]++;
-
-                    if (!in_to_burn[w] && !burned[w] && num_burned_neighbors[w] >= r) {
-                        next_to_burn.push_front(w);
-                        in_to_burn[w] = true;
-                    }
-                }
-            }
-        }
-        
-        to_burn = next_to_burn;
-        next_to_burn.clear();
-        in_to_burn.assign(num_vertices, false);
-    }
-
-    for (int u = 0; u < num_vertices; u++) {
-        if (!burned[u]) {
-            unburned = u;
-            return false;
-        }
-    }
-
-    return true;
+bool is_burning_sequence(
+    const Graph& graph,
+    const int threshold,
+    const std::vector<int>& burning_sequence,
+    Vertex& first_unburned) {
+    const auto result = simulation::simulate_burning(
+        graph, threshold, burning_sequence);
+    first_unburned = result.first_unburned.value_or(-1);
+    return result.feasible;
 }
 
-int burning_turns(Graph const &g, int r, vector<int> const &burning_sequence) {
-    int num_vertices = g.order();
-
-    int num_burned = 0;
-    vector<bool> burned(num_vertices, false);
-    vector<int> num_burned_neighbors(num_vertices, 0);
-
-
-    forward_list<int> to_burn;
-    vector<bool> in_to_burn(num_vertices, false);
-    forward_list<int> next_to_burn;
-
-    for (int i = 0; i < burning_sequence.size(); i++) {
-        auto u = burning_sequence[i];
-
-        if (!burned[u]) {
-            burned[u] = true;
-            num_burned++;
-
-            for (auto w : g.neighbors(u)) {
-                num_burned_neighbors[w]++;
-
-                if (!in_to_burn[w] && !burned[w] && num_burned_neighbors[w] >= r) {
-                    next_to_burn.push_front(w);
-                    in_to_burn[w] = true;
-                }
-            }
-        }
-
-        for (auto v : to_burn) {
-            if (!burned[v]) {
-                burned[v] = true;
-                num_burned++;
-
-                for (auto w : g.neighbors(v)) {
-                    num_burned_neighbors[w]++;
-
-                    if (!in_to_burn[w] && !burned[w] && num_burned_neighbors[w] >= r) {
-                        next_to_burn.push_front(w);
-                        in_to_burn[w] = true;
-                    }
-                }
-            }
-        }
-    
-        if (num_burned >= num_vertices) {
-            return i + 1;
-        }
-
-        to_burn = next_to_burn;
-        next_to_burn.clear();
-        in_to_burn.assign(num_vertices, false);
+int burning_turns(
+    const Graph& graph,
+    const int threshold,
+    const std::vector<int>& burning_sequence) {
+    const auto result = simulation::simulate_burning(
+        graph, threshold, burning_sequence);
+    if (!result.completion_turns) {
+        return -1;
     }
-
-    for (int u = 0; u < num_vertices; u++) {
-        if (!burned[u]) {
-            return 0;
-        }
+    if (*result.completion_turns >
+        static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+        throw std::overflow_error("burning turn count does not fit in an int");
     }
-
-    return burning_sequence.size();
+    return static_cast<int>(*result.completion_turns);
 }
 
-bool burning_history(Graph const &g, int r, vector<int> const &burning_sequence, vector<int> &history) {
-    int num_vertices = g.order();
-    int B = burning_sequence.size();
+bool burning_history(
+    const Graph& graph,
+    const int threshold,
+    const std::vector<int>& burning_sequence,
+    std::vector<int>& history) {
+    const auto result = simulation::simulate_burning(
+        graph, threshold, burning_sequence);
 
-    vector<bool> in_sequence(num_vertices, false);
-    vector<bool> burned(num_vertices, false);
-    vector<int> num_burned_neighbors(num_vertices, 0);
-
-    history.assign(B,0);
-
-    forward_list<int> to_burn;
-    vector<bool> in_to_burn(num_vertices, false);
-    forward_list<int> next_to_burn;
-
-    for (int i = 0; i < B; i++) {
-        auto u = burning_sequence[i];
-        
-        if (!burned[u]) {
-            burned[u] = true;
-            history[i]++;
-
-
-            for (auto w : g.neighbors(u)) {
-                num_burned_neighbors[w]++;
-
-                if (!in_to_burn[w] && !burned[w] && num_burned_neighbors[w] >= r) {
-                    next_to_burn.push_front(w);
-                    in_to_burn[w] = true;
-                }
-            }
+    history.clear();
+    history.reserve(result.burned_per_turn.size());
+    for (const std::size_t count : result.burned_per_turn) {
+        if (count > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+            throw std::overflow_error(
+                "burned vertex count does not fit in an int");
         }
-
-        for (auto v : to_burn) {
-            if (!burned[v]) {
-                burned[v] = true;
-                history[i]++;
-
-                for (auto w : g.neighbors(v)) {
-                    num_burned_neighbors[w]++;
-
-                    if (!in_to_burn[w] && !burned[w] && num_burned_neighbors[w] >= r) {
-                        next_to_burn.push_front(w);
-                        in_to_burn[w] = true;
-                    }
-                }
-            }
-        }
-        
-        to_burn = next_to_burn;
-        next_to_burn.clear();
-        in_to_burn.assign(num_vertices, false);
+        history.push_back(static_cast<int>(count));
     }
-
-    for (int u = 0; u < num_vertices; u++) {
-        if (!burned[u])
-            return false;
-    }
-
-    return true;
+    return result.feasible;
 }
 
-}
+} // namespace ggbp::utils

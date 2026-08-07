@@ -49,8 +49,10 @@ auto enumerate(Iterable& iterable) {
     return EnumerateWrapper(iterable);
 }
 
-bool is_burning_sequence(Graph const &g, int r, std::vector<int> &burning_sequence, Vertex &unburned);
+bool is_burning_sequence(Graph const &g, int r, std::vector<int> const &burning_sequence, Vertex &unburned);
 
+// Returns the first turn count at which the graph is fully burned, or -1 when
+// the sequence is infeasible within its own horizon. The empty graph takes 0.
 int burning_turns(Graph const &g, int r, std::vector<int> const &burning_sequence);
 
 bool burning_history(Graph const &g, int r, std::vector<int> const &burning_sequence, std::vector<int> &history);

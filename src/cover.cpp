@@ -224,7 +224,11 @@ void find_burning_sequence(Graph const &g, int const r, int &LB, int &UB, vector
             return;
 
         int turns = ggbp::utils::burning_turns(g, r, temp_burning_sequence);
-        temp_burning_sequence.resize(turns);
+        if (turns < 0) {
+            temp_burning_sequence.clear();
+        } else {
+            temp_burning_sequence.resize(static_cast<std::size_t>(turns));
+        }
 
         if(int(temp_burning_sequence.size()) == 0) {          
             if (params.verbose) {
