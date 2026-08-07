@@ -59,6 +59,15 @@ namespace ggbp::grasp {
 
 
 namespace ggbp::ilp {
+    enum class GurobiSolveStatus {
+        NotStarted,
+        Optimal,
+        Feasible,
+        Infeasible,
+        Unknown,
+        Error,
+    };
+
     struct GurobiParams {
         double mem_limit;
         double soft_mem_limit;
@@ -70,6 +79,11 @@ namespace ggbp::ilp {
 
     struct GurobiErrorInfo {
         bool error = false;
+        GurobiSolveStatus status = GurobiSolveStatus::NotStarted;
+        int native_status = 0;
+        int solution_count = 0;
+        double runtime_seconds = 0.0;
+        std::optional<double> mip_gap;
         double ObjVal = 0.0;
         double ObjBound = 0.0;
         std::string msg;

@@ -4,7 +4,9 @@
 #include <iostream>
 
 #include <gurobi_c++.h>
+#include "ggbp/burning_simulation.hpp"
 #include "ggbp/graph.hpp"
+#include "ggbp/gurobi_status.hpp"
 #include "utils/combinations.hpp"
 #include "utils/contract.hpp"
 #include "utils/utils.hpp"
@@ -48,6 +50,8 @@ vector<int> generate_covering_tree(Graph const &g, int const r, vector<Vertex> s
 void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info) {
     int num_vertices = g.order();
     vector<int> vertices = g.vertices();
+    burning_sequence.clear();
+    err_info = {};
 
     try {
         GRBEnv env(true);
@@ -148,10 +152,11 @@ void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_se
 
         model.optimize();
 
-        int opt_status = model.get(GRB_IntAttr_Status);
-        burning_sequence.clear();
+        const auto solve_status = inspect_gurobi_model(model);
+        record_gurobi_status(err_info, solve_status);
 
-        if (opt_status == GRB_OPTIMAL) {
+        if (solve_status.status == GurobiSolveStatus::Optimal ||
+            solve_status.status == GurobiSolveStatus::Feasible) {
             for(int i = 0; i < B; i++) {
                 for(int u = 0; u < num_vertices; u++) {
                     if(vars_x[u][i].get(GRB_DoubleAttr_X) > 0.5) {
@@ -160,42 +165,36 @@ void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_se
                     
                 }
             }
-        } else if (opt_status == GRB_TIME_LIMIT) {
-            err_info.error = true;
-            
-            if (model.get(GRB_DoubleAttr_ObjVal) < B)
-                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
-            else
-                err_info.ObjVal = B;
-            
-            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "time limit";
-        } else if (opt_status == GRB_MEM_LIMIT) {
-            err_info.error = true;
 
-            if (model.get(GRB_DoubleAttr_ObjVal) < B)
-                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
-            else
-                err_info.ObjVal = B;
-
-            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "memory limit";
+            const auto certificate = simulation::simulate_burning(
+                g, r, burning_sequence);
+            if (!certificate.feasible || !certificate.completion_turns) {
+                burning_sequence.clear();
+                err_info.error = true;
+                err_info.status = GurobiSolveStatus::Error;
+                err_info.msg =
+                    "Cover returned an invalid burning-sequence incumbent";
+                return;
+            }
+            burning_sequence.resize(*certificate.completion_turns);
+            if (solve_status.status == GurobiSolveStatus::Feasible) {
+                err_info.msg = "Cover accepted a feasible incumbent at " +
+                    string(gurobi_status_name(solve_status.native_status));
+            }
+        } else {
+            report_gurobi_failure(err_info, solve_status, "Cover");
         }
     } catch (GRBException e) {
         cout << "Error code = " << e.getErrorCode() << endl;
         cout << e.getMessage() << endl;
 
-        err_info.error = true;
+        report_gurobi_exception(err_info, "Cover", e.getMessage());
         err_info.ObjVal = B;
         err_info.ObjBound = 0;
-        if (e.getErrorCode() == GRB_ERROR_OUT_OF_MEMORY) {
-            err_info.msg = "out of memory";
-        } else {
-            err_info.msg = "unknown error";
-        }
     } catch (...) {
         cout << "Exception during optimization" << endl;
-        err_info.error = true;
+        report_gurobi_exception(
+            err_info, "Cover", "unknown exception during optimization");
         err_info.ObjVal = g.order();
         err_info.ObjBound = 0;
     }
@@ -220,8 +219,12 @@ void find_burning_sequence(Graph const &g, int const r, int &LB, int &UB, vector
 
         solve_ilp(g, r, B, temp_burning_sequence, params, err_info);
 
-        if (err_info.error)
+        if (err_info.status == GurobiSolveStatus::Infeasible) {
+            err_info = {};
+            temp_burning_sequence.clear();
+        } else if (err_info.error) {
             return;
+        }
 
         int turns = ggbp::utils::burning_turns(g, r, temp_burning_sequence);
         if (turns < 0) {

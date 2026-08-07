@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 #include "ggbp/ggbp.hpp"
 #include "ggbp/graph.hpp"
+#include "ggbp/gurobi_status.hpp"
 #include "utils/combinations.hpp"
 
 
@@ -153,6 +154,14 @@ int main(int argc, char *argv[]) {
         j["upper_bound"] = UB;
         j["lower_bound"] = LB;
         j["algorithm"] = "cover";
+        j["gurobi_status"] = err_info.native_status;
+        j["gurobi_status_name"] =
+            ggbp::ilp::gurobi_status_name(err_info.native_status);
+        j["gurobi_solution_count"] = err_info.solution_count;
+        j["gurobi_runtime"] = err_info.runtime_seconds;
+        j["gurobi_mip_gap"] = err_info.mip_gap
+            ? json(*err_info.mip_gap)
+            : json(nullptr);
 
         j["completed"] = !err_info.error;
 
@@ -162,5 +171,5 @@ int main(int argc, char *argv[]) {
         out_file << std::setw(4) << j << endl;
     }
 
-    return 0;
+    return err_info.error ? 1 : 0;
 }

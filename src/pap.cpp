@@ -2,6 +2,7 @@
 #include <vector>
 #include <iostream>
 #include "ggbp/graph.hpp"
+#include "ggbp/gurobi_status.hpp"
 
 #include "ggbp/ggbp.hpp"
 
@@ -9,8 +10,75 @@ namespace ggbp::ilp::pap {
 using std::vector;
 using std::cout, std::endl;
 
+namespace {
+
+bool is_valid_uniform_pap_seed_set(
+    const Graph& graph,
+    const int threshold,
+    const vector<int>& seed_set) {
+    if (threshold <= 0) {
+        return false;
+    }
+
+    vector<bool> seeds(graph.order(), false);
+    vector<bool> spreaders(graph.order(), false);
+    for (const int seed : seed_set) {
+        if (seed < 0 ||
+            static_cast<Graph::size_type>(seed) >= graph.order()) {
+            return false;
+        }
+        seeds[seed] = true;
+        spreaders[seed] = true;
+    }
+
+    for (Graph::size_type turn = 0; turn < graph.order(); ++turn) {
+        vector<bool> next = spreaders;
+        bool changed = false;
+        for (Vertex vertex = 0;
+             static_cast<Graph::size_type>(vertex) < graph.order();
+             ++vertex) {
+            if (spreaders[vertex]) {
+                continue;
+            }
+
+            int active_neighbors = 0;
+            for (const Vertex neighbor : graph.neighbors(vertex)) {
+                active_neighbors += spreaders[neighbor] ? 1 : 0;
+            }
+            if (active_neighbors >= threshold) {
+                next[vertex] = true;
+                changed = true;
+            }
+        }
+        spreaders = std::move(next);
+        if (!changed) {
+            break;
+        }
+    }
+
+    for (Vertex vertex = 0;
+         static_cast<Graph::size_type>(vertex) < graph.order();
+         ++vertex) {
+        if (seeds[vertex]) {
+            continue;
+        }
+        bool aware = false;
+        for (const Vertex neighbor : graph.neighbors(vertex)) {
+            aware = aware || spreaders[neighbor];
+        }
+        if (!aware) {
+            return false;
+        }
+    }
+    return true;
+}
+
+} // namespace
+
 void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiErrorInfo &err_info) {
     int const n_vertices = graph.order();
+    seed_set.clear();
+    err_info = {};
 
     try {        
         GRBEnv env(true);
@@ -83,53 +151,49 @@ void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp:
 
         model.optimize();
 
-        int opt_status = model.get(GRB_IntAttr_Status);
+        const auto solve_status = inspect_gurobi_model(model);
+        record_gurobi_status(err_info, solve_status);
 
-        seed_set.clear();
-
-        if (opt_status == GRB_OPTIMAL) {
+        if (solve_status.status == GurobiSolveStatus::Optimal ||
+            solve_status.status == GurobiSolveStatus::Feasible) {
             for(int u = 0; u < n_vertices; u++) {
                 if (s[u][0].get(GRB_DoubleAttr_X) > 0.5) {
                     seed_set.push_back(u);
                 }
             }
-        } else if (opt_status == GRB_TIME_LIMIT) {
-            err_info.error = true;
-            
-            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
-                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
-            else
-                err_info.ObjVal = n_vertices;
-            
-            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "time limit";
-        } else if (opt_status == GRB_MEM_LIMIT) {
-            err_info.error = true;
 
-            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
-                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
-            else
-                err_info.ObjVal = n_vertices;
+            if (!is_valid_uniform_pap_seed_set(graph, r, seed_set)) {
+                seed_set.clear();
+                err_info.error = true;
+                err_info.status = GurobiSolveStatus::Error;
+                err_info.msg = "PAP returned an invalid seed-set incumbent";
+                return;
+            }
 
-            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "memory limit";
+            if (solve_status.status == GurobiSolveStatus::Feasible) {
+                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
+                err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
+                err_info.error = true;
+                err_info.msg =
+                    "PAP retained a non-optimal incumbent at " +
+                    std::string(gurobi_status_name(
+                        solve_status.native_status));
+            }
+        } else {
+            report_gurobi_failure(err_info, solve_status, "PAP");
         }
 
     } catch (GRBException e) {
         cout << "Error code = " << e.getErrorCode() << endl;
         cout << e.getMessage() << endl;
 
-        err_info.error = true;
+        report_gurobi_exception(err_info, "PAP", e.getMessage());
         err_info.ObjVal = n_vertices;
         err_info.ObjBound = 0;
-        if (e.getErrorCode() == GRB_ERROR_OUT_OF_MEMORY) {
-            err_info.msg = "out of memory";
-        } else {
-            err_info.msg = "unknown error";
-        }
     } catch (...) {
         cout << "Exception during optimization" << endl;
-        err_info.error = true;
+        report_gurobi_exception(
+            err_info, "PAP", "unknown exception during optimization");
         err_info.ObjVal = graph.order();
         err_info.ObjBound = 0;
     }

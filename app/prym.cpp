@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 #include "ggbp/graph.hpp"
 #include "ggbp/ggbp.hpp"
+#include "ggbp/gurobi_status.hpp"
 
 using std::vector;
 using std::cout, std::endl;
@@ -122,6 +123,14 @@ int main(int argc, char* argv[]) {
         j["burning_sequence"] = burning_sequence;
         j["execution_time"] = ms_double.count()/1000;
         j["algorithm"] = "prym";
+        j["gurobi_status"] = err_info.native_status;
+        j["gurobi_status_name"] =
+            ggbp::ilp::gurobi_status_name(err_info.native_status);
+        j["gurobi_solution_count"] = err_info.solution_count;
+        j["gurobi_runtime"] = err_info.runtime_seconds;
+        j["gurobi_mip_gap"] = err_info.mip_gap
+            ? json(*err_info.mip_gap)
+            : json(nullptr);
 
         j["completed"] = !err_info.error;
 
@@ -134,5 +143,5 @@ int main(int argc, char* argv[]) {
         out_file << std::setw(4) << j << endl;
     }
 
-    return 0;
+    return err_info.error ? 1 : 0;
 }

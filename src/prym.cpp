@@ -2,7 +2,9 @@
 #include <vector>
 #include <cmath>
 #include "gurobi_c++.h"
+#include "ggbp/burning_simulation.hpp"
 #include "ggbp/graph.hpp"
+#include "ggbp/gurobi_status.hpp"
 
 #include "ggbp/ggbp.hpp"
 
@@ -135,6 +137,9 @@ class callback_prym: public GRBCallback {
 };
 
 void solve_prym(Graph &graph, int B, vector<int> &temp_burning_sequence, vector<int> initial_covered_vertices, GurobiParams params, GurobiErrorInfo &err_info) {
+    temp_burning_sequence.clear();
+    err_info = {};
+
     try {
         GRBEnv env(true);
         env.set(GRB_IntParam_OutputFlag, params.verbose);
@@ -184,9 +189,10 @@ void solve_prym(Graph &graph, int B, vector<int> &temp_burning_sequence, vector<
         model.setCallback(&cb);
         model.optimize();
         
-        temp_burning_sequence.clear();
-        auto opt_status = model.get(GRB_IntAttr_Status);
-        if(opt_status == 2) {
+        const auto solve_status = inspect_gurobi_model(model);
+        record_gurobi_status(err_info, solve_status);
+        if (solve_status.status == GurobiSolveStatus::Optimal ||
+            solve_status.status == GurobiSolveStatus::Feasible) {
             for(int j = 0; j < B; j++) {
                 for(int i = 0; i < n_vertices; i++) {
                     if(vars_x[i][j].get(GRB_DoubleAttr_X) > 0.5) {
@@ -194,43 +200,37 @@ void solve_prym(Graph &graph, int B, vector<int> &temp_burning_sequence, vector<
                     }
                 }
             }
-        } else if (opt_status == GRB_TIME_LIMIT) {
-            err_info.error = true;
-            
-            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
-                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
-            else
-                err_info.ObjVal = n_vertices;
-            
-            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "time limit";
-        } else if (opt_status == GRB_MEM_LIMIT) {
-            err_info.error = true;
 
-            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
-                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
-            else
-                err_info.ObjVal = n_vertices;
-
-            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "memory limit";
+            const auto certificate = simulation::simulate_burning(
+                graph, 1, temp_burning_sequence);
+            if (!certificate.feasible || !certificate.completion_turns) {
+                temp_burning_sequence.clear();
+                err_info.error = true;
+                err_info.status = GurobiSolveStatus::Error;
+                err_info.msg =
+                    "PRYM returned an invalid burning-sequence incumbent";
+                return;
+            }
+            temp_burning_sequence.resize(*certificate.completion_turns);
+            if (solve_status.status == GurobiSolveStatus::Feasible) {
+                err_info.msg = "PRYM accepted a feasible incumbent at " +
+                    string(gurobi_status_name(solve_status.native_status));
+            }
+        } else {
+            report_gurobi_failure(err_info, solve_status, "PRYM");
         }
 
     } catch (GRBException e) {
         cout << "Error code = " << e.getErrorCode() << endl;
         cout << e.getMessage() << endl;
 
-        err_info.error = true;
+        report_gurobi_exception(err_info, "PRYM", e.getMessage());
         err_info.ObjVal = graph.order();
         err_info.ObjBound = 0;
-        if (e.getErrorCode() == GRB_ERROR_OUT_OF_MEMORY) {
-            err_info.msg = "out of memory";
-        } else {
-            err_info.msg = "unknown error";
-        }
     } catch (...) {
         cout << "Exception during optimization" << endl;
-        err_info.error = true;
+        report_gurobi_exception(
+            err_info, "PRYM", "unknown exception during optimization");
         err_info.ObjVal = graph.order();
         err_info.ObjBound = 0;
     }
@@ -264,8 +264,12 @@ void run_prym(Graph &graph, vector<int> &burning_sequence, GurobiParams params, 
 
         solve_prym(graph, B, temp_burning_sequence, initial_covered_vertices, params, err_info);
 
-        if (err_info.error)
+        if (err_info.status == GurobiSolveStatus::Infeasible) {
+            err_info = {};
+            temp_burning_sequence.clear();
+        } else if (err_info.error) {
             return;
+        }
 
         if (params.verbose)
         cout << temp_burning_sequence.size() << endl;

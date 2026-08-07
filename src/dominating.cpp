@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include "ggbp/burning_simulation.hpp"
 #include "ggbp/graph.hpp"
+#include "ggbp/gurobi_status.hpp"
 #include "gurobi_c++.h"
 
 #include "ggbp/ggbp.hpp"
@@ -13,7 +14,43 @@
 namespace ggbp::heuristics {
 using std::vector;
 
+namespace {
+
+bool is_dominating_set(
+    const Graph& graph,
+    const vector<Vertex>& candidates) {
+    vector<bool> selected(graph.order(), false);
+    for (const Vertex candidate : candidates) {
+        if (candidate < 0 ||
+            static_cast<Graph::size_type>(candidate) >= graph.order()) {
+            return false;
+        }
+        selected[candidate] = true;
+    }
+
+    for (Vertex vertex = 0;
+         static_cast<Graph::size_type>(vertex) < graph.order();
+         ++vertex) {
+        if (selected[vertex]) {
+            continue;
+        }
+        bool dominated = false;
+        for (const Vertex neighbor : graph.neighbors(vertex)) {
+            dominated = dominated || selected[neighbor];
+        }
+        if (!dominated) {
+            return false;
+        }
+    }
+    return true;
+}
+
+} // namespace
+
 void min_dominating_set(Graph const &graph, vector<int> &dominating_set, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiErrorInfo &err_info) {
+    dominating_set.clear();
+    err_info = {};
+
     try {
         int n_vertices = graph.order();
 
@@ -47,49 +84,50 @@ void min_dominating_set(Graph const &graph, vector<int> &dominating_set, ggbp::i
 
         model.optimize();
 
-        auto opt_status = model.get(GRB_IntAttr_Status);
-        if (opt_status == GRB_OPTIMAL) {
-            dominating_set.reserve(model.get(GRB_DoubleAttr_ObjVal));
+        const auto solve_status = ggbp::ilp::inspect_gurobi_model(model);
+        ggbp::ilp::record_gurobi_status(err_info, solve_status);
+        if (solve_status.status == ggbp::ilp::GurobiSolveStatus::Optimal ||
+            solve_status.status == ggbp::ilp::GurobiSolveStatus::Feasible) {
+            dominating_set.reserve(graph.order());
             for(int j = 0; j < n_vertices; j++) {
                 if(vars_x[j].get(GRB_DoubleAttr_X) > 0.5) {
                     dominating_set.push_back(j);
                 }
             }
-        } else if (opt_status == GRB_TIME_LIMIT) {
-            err_info.error = true;
-            
-            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
-                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
-            else
-                err_info.ObjVal = n_vertices;
-            
-            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "time limit";
-        } else if (opt_status == GRB_MEM_LIMIT) {
-            err_info.error = true;
-
-            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
-                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
-            else
-                err_info.ObjVal = n_vertices;
-
-            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "memory limit";
+            if (!is_dominating_set(graph, dominating_set)) {
+                dominating_set.clear();
+                err_info.error = true;
+                err_info.status = ggbp::ilp::GurobiSolveStatus::Error;
+                err_info.msg =
+                    "minimum dominating set returned an invalid incumbent";
+                return;
+            }
+            if (solve_status.status ==
+                ggbp::ilp::GurobiSolveStatus::Feasible) {
+                err_info.msg =
+                    "MDS accepted a feasible incumbent at " +
+                    std::string(ggbp::ilp::gurobi_status_name(
+                        solve_status.native_status));
+            }
+        } else {
+            ggbp::ilp::report_gurobi_failure(
+                err_info, solve_status, "minimum dominating set");
         }
 
     } catch (GRBException e) {
         std::cout << "Error code = " << e.getErrorCode() << std::endl;
         std::cout << e.getMessage() << std::endl;
 
-        err_info.error = true;
+        ggbp::ilp::report_gurobi_exception(
+            err_info, "minimum dominating set", e.getMessage());
         err_info.ObjVal = graph.order();
         err_info.ObjBound = 0;
-        if (e.getErrorCode() == GRB_ERROR_OUT_OF_MEMORY) {
-            err_info.msg = "out of memory";
-        }
     } catch (...) {
         std::cout << "Exception during optimization" << std::endl;
-        err_info.error = true;
+        ggbp::ilp::report_gurobi_exception(
+            err_info,
+            "minimum dominating set",
+            "unknown exception during optimization");
         err_info.ObjVal = graph.order();
         err_info.ObjBound = 0;
     }
