@@ -19,10 +19,10 @@ namespace {
 
 using ggbp::simulation::BurningState;
 
-vector<Vertex> eligible_sources(const Graph& graph,
-                                const BurningState& state) {
-    vector<Vertex> candidates;
-    candidates.reserve(graph.order());
+void eligible_sources(const Graph& graph,
+                      const BurningState& state,
+                      vector<Vertex>& candidates) {
+    candidates.clear();
 
     for (Vertex vertex = 0;
          static_cast<Graph::size_type>(vertex) < graph.order();
@@ -39,122 +39,197 @@ vector<Vertex> eligible_sources(const Graph& graph,
             }
         }
     }
-
-    return candidates;
 }
 
-Vertex greedy_completion_source(const Graph& graph,
-                                const BurningState& state) {
-    const auto candidates = eligible_sources(graph, state);
-    if (candidates.empty()) {
-        throw logic_error("no eligible GRASP source");
+struct CandidateMetrics {
+    double new_frontier = 0.0;
+    double weighted_deficit_reduction = 0.0;
+    double residual_coverage = 0.0;
+};
+
+void project_current_frontier(
+    const Graph& graph,
+    const BurningState& state,
+    vector<unsigned>& frontier_increments,
+    vector<Vertex>& touched_vertices) {
+    for (const Vertex vertex : touched_vertices) {
+        frontier_increments[vertex] = 0;
     }
+    touched_vertices.clear();
 
-    Vertex best = candidates.front();
-    auto best_score =
-        graph.degree(best) - state.burned_neighbor_count(best);
-
-    for (const Vertex vertex : candidates) {
-        const auto score =
-            graph.degree(vertex) - state.burned_neighbor_count(vertex);
-        if (score > best_score) {
-            best = vertex;
-            best_score = score;
+    const auto& burned = state.burned_vertices();
+    for (const Vertex source : state.frontier()) {
+        for (const Vertex neighbor : graph.neighbors(source)) {
+            if (burned[neighbor] || state.is_in_frontier(neighbor)) {
+                continue;
+            }
+            if (frontier_increments[neighbor] == 0) {
+                touched_vertices.push_back(neighbor);
+            }
+            ++frontier_increments[neighbor];
         }
     }
-
-    return best;
 }
 
-int completion_cost(Vertex source,
-                    const Graph& graph,
-                    vector<int> sequence,
-                    BurningState state) {
-    if (state.is_burned(source)) {
-        return static_cast<int>(graph.order());
+CandidateMetrics incremental_metrics(
+    const Vertex candidate,
+    const Graph& graph,
+    const BurningState& state,
+    const vector<unsigned>& frontier_increments) {
+    CandidateMetrics metrics;
+
+    // If every remaining vertex is already in the current frontier, the
+    // source is irrelevant: the whole frontier burns in this turn.
+    if (state.is_in_frontier(candidate)) {
+        return metrics;
     }
 
-    while (!state.complete()) {
-        sequence.push_back(source);
-        state.burn(source);
+    const auto threshold = static_cast<unsigned>(state.threshold());
+    const auto& burned = state.burned_vertices();
+    const auto& burned_neighbor_counts = state.burned_neighbor_counts();
 
-        if (!state.complete()) {
-            source = greedy_completion_source(graph, state);
+    for (const Vertex neighbor : graph.neighbors(candidate)) {
+        // The candidate itself and the current frontier are marked as burned
+        // before propagation, so neither can enter the next frontier.
+        if (neighbor == candidate || burned[neighbor] ||
+            state.is_in_frontier(neighbor)) {
+            continue;
         }
+
+        const unsigned projected_count =
+            burned_neighbor_counts[neighbor] + frontier_increments[neighbor];
+        if (projected_count >= threshold) {
+            continue;
+        }
+
+        const unsigned deficit = threshold - projected_count;
+        if (deficit == 1) {
+            metrics.new_frontier += 1.0;
+        }
+        metrics.weighted_deficit_reduction +=
+            1.0 / static_cast<double>(deficit);
+        metrics.residual_coverage +=
+            1.0 / static_cast<double>(projected_count + 1);
     }
 
-    return static_cast<int>(sequence.size());
+    return metrics;
+}
+
+double normalize(const double value,
+                 const double minimum,
+                 const double maximum) {
+    if (maximum == minimum) {
+        return 0.0;
+    }
+    return (value - minimum) / (maximum - minimum);
+}
+
+void incremental_scores(
+    const Graph& graph,
+    const BurningState& state,
+    const vector<Vertex>& candidates,
+    vector<unsigned>& frontier_increments,
+    vector<Vertex>& touched_vertices,
+    vector<CandidateMetrics>& metrics,
+    vector<double>& scores) {
+    project_current_frontier(
+        graph, state, frontier_increments, touched_vertices);
+
+    metrics.clear();
+    for (const Vertex candidate : candidates) {
+        metrics.push_back(incremental_metrics(
+            candidate, graph, state, frontier_increments));
+    }
+
+    double min_new_frontier = metrics.front().new_frontier;
+    double max_new_frontier = metrics.front().new_frontier;
+    double min_deficit_reduction = metrics.front().weighted_deficit_reduction;
+    double max_deficit_reduction = metrics.front().weighted_deficit_reduction;
+    double min_residual_coverage = metrics.front().residual_coverage;
+    double max_residual_coverage = metrics.front().residual_coverage;
+
+    for (const CandidateMetrics& candidate : metrics) {
+        min_new_frontier = min(min_new_frontier, candidate.new_frontier);
+        max_new_frontier = max(max_new_frontier, candidate.new_frontier);
+        min_deficit_reduction =
+            min(min_deficit_reduction,
+                candidate.weighted_deficit_reduction);
+        max_deficit_reduction =
+            max(max_deficit_reduction,
+                candidate.weighted_deficit_reduction);
+        min_residual_coverage =
+            min(min_residual_coverage, candidate.residual_coverage);
+        max_residual_coverage =
+            max(max_residual_coverage, candidate.residual_coverage);
+    }
+
+    constexpr double new_frontier_weight = 0.55;
+    constexpr double deficit_reduction_weight = 0.30;
+    constexpr double residual_coverage_weight = 0.15;
+
+    scores.clear();
+    for (const CandidateMetrics& candidate : metrics) {
+        scores.push_back(
+            new_frontier_weight * normalize(
+                candidate.new_frontier,
+                min_new_frontier,
+                max_new_frontier) +
+            deficit_reduction_weight * normalize(
+                candidate.weighted_deficit_reduction,
+                min_deficit_reduction,
+                max_deficit_reduction) +
+            residual_coverage_weight * normalize(
+                candidate.residual_coverage,
+                min_residual_coverage,
+                max_residual_coverage));
+    }
 }
 
 } // namespace
-
-// Use the Unburned Neighbors rule to estimate the completed sequence length.
-int calculate_cost(int v,
-                   Graph const& graph,
-                   int r,
-                   vector<int> sequence,
-                   vector<bool> burning,
-                   int n_burning,
-                   vector<int> num_burning_neighbors) {
-    if (r < 1 || burning.size() != graph.order() ||
-        num_burning_neighbors.size() != graph.order()) {
-        throw invalid_argument("invalid GRASP simulation state");
-    }
-    if (v < 0 || static_cast<Graph::size_type>(v) >= graph.order()) {
-        throw out_of_range("GRASP source is outside the graph");
-    }
-
-    BurningState state(graph, r);
-    for (const Vertex source : sequence) {
-        state.burn(source);
-    }
-
-    if (n_burning < 0 ||
-        static_cast<Graph::size_type>(n_burning) != state.burned_count()) {
-        throw invalid_argument("inconsistent GRASP burned count");
-    }
-    for (Vertex vertex = 0;
-         static_cast<Graph::size_type>(vertex) < graph.order();
-         ++vertex) {
-        if (burning[vertex] != state.is_burned(vertex) ||
-            num_burning_neighbors[vertex] < 0 ||
-            static_cast<unsigned>(num_burning_neighbors[vertex]) !=
-                state.burned_neighbor_count(vertex)) {
-            throw invalid_argument("inconsistent GRASP simulation state");
-        }
-    }
-
-    return completion_cost(v, graph, move(sequence), move(state));
-}
 
 vector<int> construct(Graph const& graph, int r, default_random_engine& engine) {
     BurningState state(graph, r);
     vector<int> burning_sequence;
     burning_sequence.reserve(graph.order());
 
-    uniform_real_distribution<float> random_alpha(0, 1);
-    const float alpha = random_alpha(engine);
+    // Reuse this scratch space between rounds. Only entries touched by the
+    // current frontier are reset, avoiding another O(n) clear per turn.
+    vector<unsigned> frontier_increments(graph.order(), 0);
+    vector<Vertex> touched_vertices;
+    touched_vertices.reserve(graph.order());
+    vector<Vertex> candidates;
+    candidates.reserve(graph.order());
+    vector<Vertex> restricted_candidates;
+    restricted_candidates.reserve(graph.order());
+    vector<CandidateMetrics> metrics;
+    metrics.reserve(graph.order());
+    vector<double> scores;
+    scores.reserve(graph.order());
+
+    uniform_real_distribution<double> random_alpha(0.0, 1.0);
+    const double alpha = random_alpha(engine);
 
     while (!state.complete()) {
-        const auto candidates = eligible_sources(graph, state);
+        eligible_sources(graph, state, candidates);
         if (candidates.empty()) {
             throw logic_error("no eligible GRASP source");
         }
 
-        vector<int> costs;
-        costs.reserve(candidates.size());
-        for (const Vertex vertex : candidates) {
-            costs.push_back(completion_cost(
-                vertex, graph, burning_sequence, state));
-        }
+        incremental_scores(
+            graph,
+            state,
+            candidates,
+            frontier_increments,
+            touched_vertices,
+            metrics,
+            scores);
+        const auto [minimum, maximum] =
+            minmax_element(scores.begin(), scores.end());
+        const double cutoff = *maximum - alpha * (*maximum - *minimum);
 
-        const auto [minimum, maximum] = minmax_element(costs.begin(), costs.end());
-        const float cutoff = *minimum + alpha * (*maximum - *minimum);
-
-        vector<Vertex> restricted_candidates;
-        restricted_candidates.reserve(candidates.size());
+        restricted_candidates.clear();
         for (size_t index = 0; index < candidates.size(); ++index) {
-            if (costs[index] <= cutoff) {
+            if (scores[index] >= cutoff) {
                 restricted_candidates.push_back(candidates[index]);
             }
         }
