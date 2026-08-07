@@ -1,4 +1,7 @@
+#include <algorithm>
+#include <exception>
 #include <queue>
+#include <stdexcept>
 #include <vector>
 #include <cmath>
 #include "gurobi_c++.h"
@@ -73,67 +76,113 @@ void run_bff_d(Graph &graph, vector<int> &burning_sequence) {
     }
 }
 
-class callback_prym: public GRBCallback {
-    public:
-        Graph graph;
-        int n_vertices;
-        int B;
-        vector<vector<GRBVar>> vars_x;
-        callback_prym(Graph &_graph, int _B, vector<vector<GRBVar>> &_vars_x) {
-            graph = _graph;
-            n_vertices = graph.order();
-            B = _B;
-            vars_x = _vars_x;
+class callback_prym final : public GRBCallback {
+public:
+    callback_prym(
+        const Graph& graph,
+        const int horizon,
+        const vector<vector<GRBVar>>& variables)
+        : graph_(graph),
+          n_vertices_(static_cast<int>(graph.order())),
+          horizon_(horizon),
+          vars_x_(variables) {}
+
+    [[nodiscard]] bool failed() const noexcept {
+        return callback_error_ != nullptr;
+    }
+
+    void rethrow_if_failed() const {
+        if (callback_error_) {
+            std::rethrow_exception(callback_error_);
         }
-    protected:
-        void callback() {
-            try {
-                if (where == GRB_CB_MIPSOL) {
-                    vector<int> burning_sequence;
-                    for (int j = 0; j < B; j++)
-                        for (int i = 0; i < n_vertices; i++)
-                            if (getSolution(vars_x[i][j]) > 0.5) {
-                                burning_sequence.push_back(i);
-                                break;   
-                            }
+    }
 
-                    for (int i : burning_sequence)
-                        if (graph.distance_matrix[i].size() == 0)
-                            graph.calculate_distances(i);
+protected:
+    void callback() override {
+        if (callback_error_) {
+            abort();
+            return;
+        }
 
-                    int min_d, max_v = -1, max_d = 0, diff = n_vertices;
-                    for (int i = 0; i < n_vertices; i++) {
-                        min_d = n_vertices;
-                        for (int j = 0; j < B; j++) {
-                            diff = graph.get_distance(burning_sequence[j], i) - (B - (j+1));
-                            if (diff < min_d)
-                                min_d = diff;
-                        }
-                        if (min_d > max_d) {
-                            max_d = min_d;
-                            max_v = i;
-                        }
-                    }
+        try {
+            if (where != GRB_CB_MIPSOL) {
+                return;
+            }
 
-                    if (max_v != -1) {
-                        if (graph.distance_matrix[max_v].size() == 0)
-                            graph.calculate_distances(max_v);
-                        GRBLinExpr expr = 0;
-                        for (int j = 0; j < B; j++)
-                            for (int u = 0; u < n_vertices; u++)
-                                if (graph.get_distance(max_v, u) <= B - (j+1))
-                                    expr += vars_x[u][j];
-                        addLazy(expr >= 1);    
-                    }
+            const vector<int> burning_sequence = incumbent_sequence();
+            add_violated_cover_constraint(burning_sequence);
+        } catch (...) {
+            callback_error_ = std::current_exception();
+            abort();
+        }
+    }
 
+private:
+    Graph graph_;
+    int n_vertices_;
+    int horizon_;
+    vector<vector<GRBVar>> vars_x_;
+    std::exception_ptr callback_error_;
+
+    vector<int> incumbent_sequence() {
+        vector<int> sequence;
+        sequence.reserve(static_cast<std::size_t>(horizon_));
+        for (int turn = 0; turn < horizon_; ++turn) {
+            for (int vertex = 0; vertex < n_vertices_; ++vertex) {
+                if (getSolution(vars_x_[vertex][turn]) > 0.5) {
+                    sequence.push_back(vertex);
+                    break;
                 }
-            } catch (GRBException e) {
-                cout << "Error number: " << e.getErrorCode() << endl;
-                cout << e.getMessage() << endl;                
-            } catch (...) {
-                cout << "Error during callback" << endl;
             }
         }
+        if (sequence.size() != static_cast<std::size_t>(horizon_)) {
+            throw std::runtime_error(
+                "PRYM callback received an incomplete incumbent sequence");
+        }
+        return sequence;
+    }
+
+    void add_violated_cover_constraint(const vector<int>& sequence) {
+        for (const int source : sequence) {
+            if (graph_.distance_matrix[source].empty()) {
+                graph_.calculate_distances(source);
+            }
+        }
+
+        int farthest_vertex = -1;
+        int maximum_deficit = 0;
+        for (int vertex = 0; vertex < n_vertices_; ++vertex) {
+            int minimum_deficit = n_vertices_;
+            for (int turn = 0; turn < horizon_; ++turn) {
+                const int deficit =
+                    graph_.get_distance(sequence[turn], vertex) -
+                    (horizon_ - (turn + 1));
+                minimum_deficit = std::min(minimum_deficit, deficit);
+            }
+            if (minimum_deficit > maximum_deficit) {
+                maximum_deficit = minimum_deficit;
+                farthest_vertex = vertex;
+            }
+        }
+
+        if (farthest_vertex == -1) {
+            return;
+        }
+        if (graph_.distance_matrix[farthest_vertex].empty()) {
+            graph_.calculate_distances(farthest_vertex);
+        }
+
+        GRBLinExpr expression = 0;
+        for (int turn = 0; turn < horizon_; ++turn) {
+            for (int source = 0; source < n_vertices_; ++source) {
+                if (graph_.get_distance(farthest_vertex, source) <=
+                    horizon_ - (turn + 1)) {
+                    expression += vars_x_[source][turn];
+                }
+            }
+        }
+        addLazy(expression >= 1);
+    }
 };
 
 void solve_prym(Graph &graph, int B, vector<int> &temp_burning_sequence, vector<int> initial_covered_vertices, GurobiParams params, GurobiErrorInfo &err_info) {
@@ -185,9 +234,10 @@ void solve_prym(Graph &graph, int B, vector<int> &temp_burning_sequence, vector<
                 vars_x[i][j].set(GRB_IntAttr_BranchPriority, B-j);
                 
         model.set(GRB_IntParam_LazyConstraints, 1);
-        callback_prym cb = callback_prym(graph, B, vars_x);
+        callback_prym cb(graph, B, vars_x);
         model.setCallback(&cb);
         model.optimize();
+        cb.rethrow_if_failed();
         
         const auto solve_status = inspect_gurobi_model(model);
         record_gurobi_status(err_info, solve_status);
@@ -220,11 +270,15 @@ void solve_prym(Graph &graph, int B, vector<int> &temp_burning_sequence, vector<
             report_gurobi_failure(err_info, solve_status, "PRYM");
         }
 
-    } catch (GRBException e) {
+    } catch (const GRBException& e) {
         cout << "Error code = " << e.getErrorCode() << endl;
         cout << e.getMessage() << endl;
 
         report_gurobi_exception(err_info, "PRYM", e.getMessage());
+        err_info.ObjVal = graph.order();
+        err_info.ObjBound = 0;
+    } catch (const std::exception& e) {
+        report_gurobi_exception(err_info, "PRYM callback", e.what());
         err_info.ObjVal = graph.order();
         err_info.ObjBound = 0;
     } catch (...) {
