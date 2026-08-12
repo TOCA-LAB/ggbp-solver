@@ -65,7 +65,7 @@ value_starting_ignitors(const Graph& G, int r, const vector<Vertex>& ignitors) {
       u = ignitors[i];
       const vector<Vertex>& nei = G.neighbors(u);
       for (auto it = common_neighbors.begin(); it != common_neighbors.end(); ) 
-        if (std::find(nei.begin(), nei.end(), *it) != nei.end())
+        if (std::find(nei.begin(), nei.end(), *it) == nei.end())
           it = common_neighbors.erase(it);
         else
           ++it;
@@ -158,6 +158,8 @@ update_at_risk_neighbor_counts(const Graph& G,
                                const int r, 
                                const vector<int> &burning_round,
                                vector<int> &at_risk_neighbor_count, 
+                               MaxPQ &candidate_ignitors,
+                               const vector<MaxPQ::handle_type> &candidate_ignitors_handles,
                                Vertex u,
                                int delta) noexcept {
   PRECONDITION(r >= 1);
@@ -167,8 +169,11 @@ update_at_risk_neighbor_counts(const Graph& G,
   PRECONDITION(delta == 1 || delta == -1);
 
   for (Vertex x : G.neighbors(u))
-    if (burning_round[x] == NO_ROUND)
-      at_risk_neighbor_count[x] += delta;
+    if (burning_round[x] == NO_ROUND) {
+        at_risk_neighbor_count[x] += delta;
+        candidate_ignitors.update(candidate_ignitors_handles[x],
+                                  {at_risk_neighbor_count[x], x});
+    }
 }
 
 
@@ -281,7 +286,10 @@ vector<Vertex> spontaneous_neighbors(const Graph &G, const int r) {
       ++round;
 
       if (burned_neighbors_count[u] == r - 1)
-        update_at_risk_neighbor_counts(G, r, burning_round, at_risk_neighbor_count, u, -1);
+        update_at_risk_neighbor_counts(G, r, burning_round,
+                                       at_risk_neighbor_count,
+                                       candidate_ignitors,
+                                       candidate_ignitors_handles, u, -1);
     } else {
       auto [p, u] = burning_queue.top();
       burning_queue.pop();
@@ -292,9 +300,15 @@ vector<Vertex> spontaneous_neighbors(const Graph &G, const int r) {
             logger.info(3) << "Spontaneous: " << w;
             burning_queue.update(burning_queue_handle[w], {round + 1, w});
             burning_round[w] = round + 1;
-            update_at_risk_neighbor_counts(G, r, burning_round, at_risk_neighbor_count, w, -1);
+            update_at_risk_neighbor_counts(G, r, burning_round,
+                                           at_risk_neighbor_count,
+                                           candidate_ignitors,
+                                           candidate_ignitors_handles, w, -1);
           } else if (burned_neighbors_count[w] == r - 1)
-                update_at_risk_neighbor_counts(G, r, burning_round, at_risk_neighbor_count, w, 1);
+                update_at_risk_neighbor_counts(G, r, burning_round,
+                                               at_risk_neighbor_count,
+                                               candidate_ignitors,
+                                               candidate_ignitors_handles,  w, 1);
         }
       }
     }
