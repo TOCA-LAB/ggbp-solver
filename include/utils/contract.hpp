@@ -9,8 +9,6 @@
 #include <algorithm>
 #include <vector>
 
-#define NO_CONTRACTS  1
-
 // Enable/disable contracts via macro (define NO_CONTRACTS para desabilitar)
 #if !defined(NO_CONTRACTS)
 #define CONTRACT_CHECK(expr, kind) \

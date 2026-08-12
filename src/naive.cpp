@@ -265,7 +265,7 @@ void solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<
 
 void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams params, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info) {
     PRECONDITION(r >= 1);
-    PRECONDITION(G.order() >= r);
+    PRECONDITION(g.order() >= r);
 
     vector<int> temp_burning_sequence;
 

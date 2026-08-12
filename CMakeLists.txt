@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(ggbp LANGUAGES CXX)
 
 option(CXX "enable C++ compilation" ON)
+option(ENABLE_CONTRACTS "Enable runtime contract checks" ON)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
