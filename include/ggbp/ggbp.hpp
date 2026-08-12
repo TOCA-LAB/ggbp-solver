@@ -11,11 +11,15 @@
 
 namespace ggbp::brkga {
     struct BRKGAParams {
-        unsigned p, MAX_GENS;
-        double pe, pm, rhoe;
-        unsigned K, MAXT;
-        unsigned seed;
-        bool verbose;
+        unsigned p = 100;
+        unsigned MAX_GENS = 100;
+        double pe = 0.20;
+        double pm = 0.10;
+        double rhoe = 0.70;
+        unsigned K = 2;
+        unsigned MAXT = 1;
+        unsigned seed = 0;
+        bool verbose = false;
 
         BRKGAParams() = default;
     };
@@ -74,9 +78,9 @@ namespace ggbp::ilp {
         std::string msg;
     };
         
-    int get_upper_bound(Graph const &g, int const r, bool verbose);
+    int get_upper_bound(Graph const &g, int const r, bool const verbose, unsigned const seed = 0);
 
-    int get_lower_bound(Graph const &g, int const r, bool verbose);
+    int get_lower_bound(Graph const &g, int const r, bool const verbose);
 
     namespace naive {
         struct LPParams : ggbp::ilp::GurobiParams {
