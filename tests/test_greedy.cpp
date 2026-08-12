@@ -15,7 +15,7 @@ TEST_CASE("get_best_ignitor", "[greedy]") {
 
     std::vector<int> expected = {1, 5, 9, 2};
 
-    std::vector<Vertex> burning_seq = ggbp::heuristics::greedy(G, 1);
+    std::vector<Vertex> burning_seq = ggbp::heuristics::spontaneous_neighbors(G, 1);
 
     for (auto [i, v] : ggbp::utils::enumerate(expected))
       REQUIRE(burning_seq[i] == v);
