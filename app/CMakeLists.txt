@@ -15,10 +15,6 @@ target_link_libraries(pap PRIVATE ggbp)
 add_executable(brkga brkga.cpp )
 target_link_libraries(brkga PRIVATE ggbp)
 
-if(OpenMP_CXX_FOUND)
-    target_link_libraries(brkga PUBLIC OpenMP::OpenMP_CXX)
-endif()
-
 add_executable(grasp grasp.cpp)
 target_link_libraries(grasp PRIVATE ggbp)
 

@@ -33,8 +33,10 @@ else()
 endif()
 
 target_link_libraries(ggbp
-    optimized ${GUROBI_CXX_LIBRARY}
-    debug ${GUROBI_CXX_DEBUG_LIBRARY}
+    PRIVATE
+        optimized ${GUROBI_CXX_LIBRARY}
+        debug ${GUROBI_CXX_DEBUG_LIBRARY}
+        ${GUROBI_LIBRARY}
+    PUBLIC
+        OpenMP::OpenMP_CXX
 )
-
-target_link_libraries(ggbp ${GUROBI_LIBRARY})
