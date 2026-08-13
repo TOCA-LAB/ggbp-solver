@@ -1,6 +1,7 @@
 set(GGBP_SOURCES
     graph.cpp
     ggbp_utils.cpp
+    gurobi_status.cpp
     cover.cpp
     naive.cpp
     prym.cpp
@@ -12,19 +13,16 @@ set(GGBP_SOURCES
     unburned_neighbors.cpp
 )
 
-add_library(ggbp STATIC ${GGBP_SOURCES}
-    brkga.cpp)
+add_library(ggbp STATIC ${GGBP_SOURCES})
 
 if(NOT ENABLE_CONTRACTS)
     target_compile_definitions(ggbp PUBLIC NO_CONTRACTS=1)
 endif()
 
 target_include_directories(ggbp
-    PUBLIC ${PROJECT_SOURCE_DIR}/include ${GUROBI_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
+    PUBLIC ${PROJECT_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS}
     PRIVATE ${PROJECT_SOURCE_DIR}/src
 )
-
-add_library(gurobi STATIC IMPORTED)
 
 if(MSVC)
     target_compile_options(ggbp PRIVATE -W1)
@@ -36,7 +34,7 @@ target_link_libraries(ggbp
     PRIVATE
         optimized ${GUROBI_CXX_LIBRARY}
         debug ${GUROBI_CXX_DEBUG_LIBRARY}
-        ${GUROBI_LIBRARY}
     PUBLIC
         OpenMP::OpenMP_CXX
+        gurobi
 )

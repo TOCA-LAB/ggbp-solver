@@ -37,3 +37,11 @@ endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(GUROBI DEFAULT_MSG GUROBI_LIBRARY)
+
+if(GUROBI_FOUND AND NOT TARGET gurobi)
+    add_library(gurobi STATIC IMPORTED)
+    set_target_properties(gurobi PROPERTIES
+        IMPORTED_LOCATION "${GUROBI_LIBRARY}"
+        INTERFACE_INCLUDE_DIRECTORIES "${GUROBI_INCLUDE_DIRS}"
+    )
+endif()
