@@ -76,7 +76,7 @@ void add_active_neighborhood_logic(GRBModel &model, Graph const &g, vector<vecto
 
     for (int u = 0; u < num_vertices; u++) {
         if (g.degree(u) < r)
-            break; // XXX Acho que aqui é um continue, certo?
+            continue;
 
         for (int t = 2; t < B+1; t++) {
             GRBLinExpr expr = 0;
