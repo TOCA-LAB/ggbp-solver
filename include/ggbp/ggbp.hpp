@@ -95,7 +95,7 @@ namespace ggbp::ilp {
     namespace cover {    
         std::vector<int> generate_covering_tree(Graph const &g, int const r, std::vector<int> sources);
 
-        void solve_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiStatus &err_info);
+        void solve_ilp(Graph const &g, int const r, int const B, ggbp::ilp::GurobiParams params, std::vector<int> &burning_sequence, GurobiStatus &err_info);
 
         void find_burning_sequence(Graph const &g, int const r, int &LB, int &UB, std::vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiStatus &err_info);
     }

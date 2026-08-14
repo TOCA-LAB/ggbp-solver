@@ -113,9 +113,9 @@ int main(int argc, char *argv[]) {
     }
 
     vector<Vertex> burning_sequence;
-    ggbp::ilp::GurobiStatus err_info;
+    ggbp::ilp::GurobiStatus solve_status;
     
-    ggbp::ilp::cover::find_burning_sequence(graph, r, LB, UB, burning_sequence, params, err_info);
+    ggbp::ilp::cover::find_burning_sequence(graph, r, LB, UB, burning_sequence, params, solve_status);
 
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
     cout << "graph: " << graph_name << ", n = " << graph.order() << ", m = " << graph.size() << "\n"
          << "runtime = " << ms_double.count() / 1000 << endl;
 
-    if (!err_info.error) {     
+    if (!solve_status.error) {     
         cout << "b(G) = " << burning_sequence.size() << "\n";
 
         cout << "burning Sequence = ";
@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
             cout << u + 1 << " ";
         cout << endl;
     } else {
-        cout << "Failed to compute burning sequence. Error: " << err_info.msg << endl;
+        cout << "Failed to compute burning sequence. Error: " << solve_status.msg << endl;
     }
 
     if (program.present("--json")) {
@@ -155,10 +155,10 @@ int main(int argc, char *argv[]) {
         j["lower_bound"] = LB;
         j["algorithm"] = "cover";
 
-        j["completed"] = !err_info.error;
+        j["completed"] = !solve_status.error;
 
-        if (err_info.error)
-            j["error_message"] = err_info.msg;
+        if (solve_status.error)
+            j["error_message"] = solve_status.msg;
 
         out_file << std::setw(4) << j << endl;
     }

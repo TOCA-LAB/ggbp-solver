@@ -94,9 +94,8 @@ std::optional<double> solve_ilp(Graph &g, int const r, int const B, LPParams par
     int const n_vertices = g.order();
 
     burning_sequence.clear();
-    solve_status = {};
 
-    
+    solve_status = {};
     solve_status.ObjVal = B;
     solve_status.ObjBound = 0;
 
