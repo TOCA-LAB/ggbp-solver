@@ -1,7 +1,8 @@
 #include <chrono>
-#include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
+#include <optional>
 #include <string>
 
 #include <argparse/argparse.hpp>
@@ -123,9 +124,11 @@ int main(int argc, char* argv[]) {
     }
     
     vector<int> burning_sequence;
-    ggbp::ilp::GurobiStatus err_info;
+    ggbp::ilp::GurobiStatus solve_status;
     
     int UB, LB;
+    std::optional<double> lr;
+
     if (program.is_used("-lb")) {
         LB = program.get<int>("-lb");
     } else {
@@ -139,17 +142,23 @@ int main(int argc, char* argv[]) {
     }
 
     if (params.opt) {
-        ggbp::ilp::naive::solve_ilp(graph, r, UB, params, burning_sequence, err_info);
+        lr = ggbp::ilp::naive::solve_ilp(graph, r, UB, params, burning_sequence, solve_status);
     
-        if (err_info.error) {
-            UB = err_info.ObjVal;
-            LB = err_info.ObjBound;
+        if (solve_status.error) {
+            UB = solve_status.ObjVal;
+            LB = solve_status.ObjBound;
         } else {
             UB = burning_sequence.size();
-            LB = burning_sequence.size();
+
+            if (lr.has_value()) {
+                LB = lr.value();
+                LB += (lr.value() - LB) > 0.001;
+            } else {
+                LB = burning_sequence.size();
+            }
         }
     } else {
-        ggbp::ilp::naive::find_burning_sequence(graph, r, LB, UB, params, burning_sequence, err_info);
+        ggbp::ilp::naive::find_burning_sequence(graph, r, LB, UB, params, burning_sequence, solve_status);
     }
     
     auto t2 = high_resolution_clock::now();
@@ -158,7 +167,7 @@ int main(int argc, char* argv[]) {
     cout << "graph: " << graph_name << ", n = " << graph.order() << ", m = " << graph.size() << "\n"
          << "runtime = " << ms_double.count() / 1000 << endl;
 
-    if (!err_info.error) {     
+    if (!solve_status.error) {     
         cout << "b(G) = " << burning_sequence.size() << "\n";
 
         cout << "burning Sequence = ";
@@ -166,7 +175,7 @@ int main(int argc, char* argv[]) {
             cout << u + 1 << " ";
         cout << endl;
     } else {
-        cout << "Failed to compute burning sequence. Error: " << err_info.msg << endl;
+        cout << "Failed to compute burning sequence. Error: " << solve_status.msg << endl;
     }
 
 
@@ -187,6 +196,10 @@ int main(int argc, char* argv[]) {
         j["burning_number"] = burning_sequence.size();
         j["burning_sequence"] = burning_sequence;
         j["execution_time"] = ms_double.count()/1000;
+        
+        if (params.linear_relax)
+            j["linear_relaxation"] = lr.value_or(UB);
+        
         j["upper_bound"] = UB;
         j["lower_bound"] = LB;
 
@@ -200,10 +213,10 @@ int main(int argc, char* argv[]) {
         }
         j["algorithm"] = "naive-" + alg;
 
-        j["completed"] = !err_info.error;
+        j["completed"] = !solve_status.error;
 
-        if (err_info.error)
-            j["error_message"] = err_info.msg;
+        if (solve_status.error)
+            j["error_message"] = solve_status.msg;
 
         out_file << std::setw(4) << j << endl;
     }
