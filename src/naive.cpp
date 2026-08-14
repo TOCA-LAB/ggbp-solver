@@ -298,27 +298,30 @@ void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams par
         }
 
         params.time_limit -= solve_status.runtime_seconds;
+
         solve_ilp(g, r, B, params, temp_burning_sequence, solve_status);
 
-        if (solve_status.error) {
-            if (params.verbose) {
+        if (solve_status.error && solve_status.status != GurobiSolveStatus::Infeasible) {
+            if (params.verbose)
                 cout << "Error during ILP solving: " << solve_status.msg << endl;
             return;
         }
 
-        int turns = ggbp::utils::burning_turns(g, r, temp_burning_sequence);
-        temp_burning_sequence.resize(turns);
 
-        if (int(temp_burning_sequence.size()) == 0) {
+        if (solve_status.status == GurobiSolveStatus::Infeasible) {
             if (params.verbose) {
                 cout << "There is no burning sequence of length " << B << "." << endl << endl;
             }
             LB = B+1;
         } else {
+            int turns = ggbp::utils::burning_turns(g, r, temp_burning_sequence);
+            temp_burning_sequence.resize(turns);
+            
             if (params.verbose) {
-                cout << "A burning sequence of length " << B << " was found." << endl << endl;
+                cout << "A burning sequence of length " << turns << " was found." << endl << endl;
             }
-            UB = B;
+
+            UB = turns;
             swap(burning_sequence, temp_burning_sequence);
 
             if (UB == LB)
@@ -331,6 +334,4 @@ void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams par
     if (params.verbose)
         cout << "Optimal burning sequence has length " << int(burning_sequence.size()) << "." << endl << endl;
 }
-
-
 }
