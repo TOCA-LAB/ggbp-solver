@@ -125,7 +125,6 @@ int main(int argc, char* argv[]) {
         j["order"] = graph.order();
         j["size"] = graph.size();
         j["r"] = r;
-        j["algorithm"] = "dm";
         j["burning_number"] = burning_sequence.size();
         j["burning_sequence"] = burning_sequence;
         j["execution_time"] = ms_double.count()/1000;
@@ -135,8 +134,6 @@ int main(int argc, char* argv[]) {
 
         if (err_info.error) {
             j["error_message"] = err_info.msg;
-            j["upper_bound"] = graph.order();
-            j["lower_bound"] = 0;
         }
 
         out_file << std::setw(4) << j << endl;

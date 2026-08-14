@@ -1,20 +1,27 @@
-#include <vector>
 #include <forward_list>
-#include <string>
 #include <iostream>
-#include <exception>
-#include "ggbp/graph.hpp"
+#include <string>
+#include <vector>
 #include "gurobi_c++.h"
+#include "ggbp/graph.hpp"
+#include "ggbp/gurobi_status.hpp"
 
 #include "ggbp/ggbp.hpp"
 
 namespace ggbp::heuristics {
 using std::vector, std::forward_list;
+using std::cout, std::endl;
 
-void min_dominating_set(Graph const &graph, vector<int> &dominating_set, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiStatus &err_info) {
+void min_dominating_set(Graph const &graph, vector<int> &dominating_set, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiStatus &solve_status) {
+    int n_vertices = graph.order();
+    
+    dominating_set.clear();
+
+    solve_status = {};
+    solve_status.ObjVal = n_vertices;
+    solve_status.ObjBound = 0;
+    
     try {
-        int n_vertices = graph.order();
-
         GRBEnv env(true);
         env.set(GRB_IntParam_OutputFlag, params.verbose);
 
@@ -53,52 +60,26 @@ void min_dominating_set(Graph const &graph, vector<int> &dominating_set, ggbp::i
                     dominating_set.push_back(j);
                 }
             }
-        } else if (opt_status == GRB_TIME_LIMIT) {
-            err_info.error = true;
-            
-            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
-                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
-            else
-                err_info.ObjVal = n_vertices;
-            
-            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "time limit";
-        } else if (opt_status == GRB_MEM_LIMIT) {
-            err_info.error = true;
-
-            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
-                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
-            else
-                err_info.ObjVal = n_vertices;
-
-            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "memory limit";
+        } else {
+            report_gurobi_failure(solve_status, model, "Naive");
         }
-
     } catch (GRBException e) {
-        std::cout << "Error code = " << e.getErrorCode() << std::endl;
-        std::cout << e.getMessage() << std::endl;
+        cout << "Error code = " << e.getErrorCode() << endl;
+        cout << e.getMessage() << endl;
 
-        err_info.error = true;
-        err_info.ObjVal = graph.order();
-        err_info.ObjBound = 0;
-        if (e.getErrorCode() == GRB_ERROR_OUT_OF_MEMORY) {
-            err_info.msg = "out of memory";
-        }
+        report_gurobi_exception(solve_status, "Naive", e.getMessage());
     } catch (...) {
-        std::cout << "Exception during optimization" << std::endl;
-        err_info.error = true;
-        err_info.ObjVal = graph.order();
-        err_info.ObjBound = 0;
+        cout << "Exception during optimization" << endl;
+        report_gurobi_exception(solve_status, "Naive", "unknown exception during optimization");
     }
 }
 
-vector<Vertex> dominating(Graph const &graph, int r, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiStatus &err_info) {
+vector<Vertex> dominating(Graph const &graph, int r, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiStatus &solve_status) {
     vector<int> dominating_set;
 
-    min_dominating_set(graph, dominating_set, params, err_info);
+    min_dominating_set(graph, dominating_set, params, solve_status);
 
-    if (err_info.error) {
+    if (solve_status.error) {
         return {};
     }
 
