@@ -225,7 +225,7 @@ std::optional<double> solve_ilp(Graph &g, int const r, int const B, LPParams par
 
         model.optimize();
 
-        auto solve_status = inspect_gurobi_model(model);
+        solve_status = inspect_gurobi_model(model);
 
         if (solve_status.status == GurobiSolveStatus::Optimal || 
             solve_status.status == GurobiSolveStatus::Feasible) {
@@ -279,11 +279,12 @@ std::optional<double> solve_ilp(Graph &g, int const r, int const B, LPParams par
     return std::nullopt;
 }
 
-void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams params, std::vector<int> &burning_sequence, GurobiStatus &err_info) {
+void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams params, std::vector<int> &burning_sequence, GurobiStatus &solve_status) {
     PRECONDITION(r >= 1);
     PRECONDITION(g.order() >= r);
 
     vector<int> temp_burning_sequence;
+    solve_status = {};
 
     int iteration = 1;
     while(LB <= UB) {
@@ -296,10 +297,14 @@ void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams par
             cout << "Trying to find a burning sequence of length " << B << "." << endl;
         }
 
-        solve_ilp(g, r, B, params, temp_burning_sequence, err_info);
+        params.time_limit -= solve_status.runtime_seconds;
+        solve_ilp(g, r, B, params, temp_burning_sequence, solve_status);
 
-        if (err_info.error)
+        if (solve_status.error) {
+            if (params.verbose) {
+                cout << "Error during ILP solving: " << solve_status.msg << endl;
             return;
+        }
 
         int turns = ggbp::utils::burning_turns(g, r, temp_burning_sequence);
         temp_burning_sequence.resize(turns);
