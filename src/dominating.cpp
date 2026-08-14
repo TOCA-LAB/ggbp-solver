@@ -52,8 +52,11 @@ void min_dominating_set(Graph const &graph, vector<int> &dominating_set, ggbp::i
 
         model.optimize();
 
-        auto opt_status = model.get(GRB_IntAttr_Status);
-        if (opt_status == GRB_OPTIMAL) {
+        solve_status = ggbp::ilp::inspect_gurobi_model(model);
+
+        if (solve_status.status == ggbp::ilp::GurobiSolveStatus::Optimal || 
+            solve_status.status == ggbp::ilp::GurobiSolveStatus::Feasible) {
+
             dominating_set.reserve(model.get(GRB_DoubleAttr_ObjVal));
             for(int j = 0; j < n_vertices; j++) {
                 if(vars_x[j].get(GRB_DoubleAttr_X) > 0.5) {
@@ -61,7 +64,7 @@ void min_dominating_set(Graph const &graph, vector<int> &dominating_set, ggbp::i
                 }
             }
         } else {
-            report_gurobi_failure(solve_status, model, "Naive");
+            ggbp::ilp::report_gurobi_failure(solve_status, model, "Naive");
         }
     } catch (GRBException e) {
         cout << "Error code = " << e.getErrorCode() << endl;

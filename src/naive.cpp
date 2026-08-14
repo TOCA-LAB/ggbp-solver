@@ -312,6 +312,7 @@ void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams par
                 cout << "There is no burning sequence of length " << B << "." << endl << endl;
             }
             LB = B+1;
+            solve_status = {};
         } else {
             int turns = ggbp::utils::burning_turns(g, r, temp_burning_sequence);
             temp_burning_sequence.resize(turns);

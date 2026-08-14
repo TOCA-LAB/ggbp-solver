@@ -91,11 +91,11 @@ void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp:
 
         model.optimize();
 
-        int opt_status = model.get(GRB_IntAttr_Status);
+        solve_status = inspect_gurobi_model(model);
 
-        seed_set.clear();
+        if (solve_status.status == GurobiSolveStatus::Optimal || 
+            solve_status.status == GurobiSolveStatus::Feasible) {
 
-        if (opt_status == GRB_OPTIMAL) {
             for(int u = 0; u < n_vertices; u++) {
                 if (s[u][0].get(GRB_DoubleAttr_X) > 0.5) {
                     seed_set.push_back(u);
