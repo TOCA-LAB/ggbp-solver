@@ -11,8 +11,14 @@ namespace ggbp::ilp::pap {
 using std::vector;
 using std::cout, std::endl;
 
-void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiStatus &err_info) {
+void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiStatus &solve_status) {
     int const n_vertices = graph.order();
+
+    seed_set.clear();
+
+    solve_status = {};
+    solve_status.ObjVal = n_vertices;
+    solve_status.ObjBound = 0;
 
     try {        
         GRBEnv env(true);
@@ -95,45 +101,17 @@ void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp:
                     seed_set.push_back(u);
                 }
             }
-        } else if (opt_status == GRB_TIME_LIMIT) {
-            err_info.error = true;
-            
-            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
-                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
-            else
-                err_info.ObjVal = n_vertices;
-            
-            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "time limit";
-        } else if (opt_status == GRB_MEM_LIMIT) {
-            err_info.error = true;
-
-            if (model.get(GRB_DoubleAttr_ObjVal) < n_vertices)
-                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
-            else
-                err_info.ObjVal = n_vertices;
-
-            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "memory limit";
+        } else {
+            report_gurobi_failure(solve_status, model, "Naive");
         }
-
     } catch (GRBException e) {
         cout << "Error code = " << e.getErrorCode() << endl;
         cout << e.getMessage() << endl;
 
-        err_info.error = true;
-        err_info.ObjVal = n_vertices;
-        err_info.ObjBound = 0;
-        if (e.getErrorCode() == GRB_ERROR_OUT_OF_MEMORY) {
-            err_info.msg = "out of memory";
-        } else {
-            err_info.msg = "unknown error";
-        }
+        report_gurobi_exception(solve_status, "Naive", e.getMessage());
     } catch (...) {
         cout << "Exception during optimization" << endl;
-        err_info.error = true;
-        err_info.ObjVal = graph.order();
-        err_info.ObjBound = 0;
+        report_gurobi_exception(solve_status, "Naive", "unknown exception during optimization");
     }
 }
 
