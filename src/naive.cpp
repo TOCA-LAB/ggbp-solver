@@ -1,8 +1,10 @@
 #include <cmath>
+#include <optional>
 #include "gurobi_c++.h"
 #include "utils/contract.hpp"
 #include "ggbp/graph.hpp"
 #include "utils/utils.hpp"
+#include "ggbp/gurobi_status.hpp"
 
 #include "ggbp/ggbp.hpp"
 
@@ -88,8 +90,15 @@ void add_active_neighborhood_logic(GRBModel &model, Graph const &g, vector<vecto
     }
 }
 
-void solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info) {
+std::optional<double> solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<int> &burning_sequence, GurobiStatus &solve_status) {
     int const n_vertices = g.order();
+
+    burning_sequence.clear();
+    solve_status = {};
+
+    
+    solve_status.ObjVal = B;
+    solve_status.ObjBound = 0;
 
     char vtype = GRB_BINARY;
 
@@ -216,10 +225,24 @@ void solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<
 
         model.optimize();
 
-        int opt_status = model.get(GRB_IntAttr_Status);
+        auto solve_status = inspect_gurobi_model(model);
 
-        burning_sequence.clear();
-        if (opt_status == GRB_OPTIMAL) {
+        if (solve_status.status == GurobiSolveStatus::Optimal || 
+            solve_status.status == GurobiSolveStatus::Feasible) {
+            
+            if (params.linear_relax) {
+                if (solve_status.status == GurobiSolveStatus::Optimal)
+                    return model.get(GRB_DoubleAttr_ObjVal);
+
+                solve_status.error = true;
+                solve_status.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
+                solve_status.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
+                solve_status.msg =
+                    "Naive LP stopped with a non-optimal feasible point at " +
+                    string(gurobi_status_name(solve_status.native_status));
+                return std::nullopt;
+            }
+
             for(int t = 1; t < B+1; t++) {
                 for(int u = 0; u < n_vertices; u++) {
                     if (y[u][t].get(GRB_DoubleAttr_X) > 0.5) {
@@ -227,48 +250,36 @@ void solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<
                     }
                 }
             }
-        } else if (opt_status == GRB_TIME_LIMIT) {
-            err_info.error = true;
             
-            if (model.get(GRB_DoubleAttr_ObjVal) < B)
-                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
-            else
-                err_info.ObjVal = B;
-            
-            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "time limit";
-        } else if (opt_status == GRB_MEM_LIMIT) {
-            err_info.error = true;
-
-            if (model.get(GRB_DoubleAttr_ObjVal) < B)
-                err_info.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
-            else
-                err_info.ObjVal = B;
-
-            err_info.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
-            err_info.msg = "memory limit";
+            if (solve_status.status == GurobiSolveStatus::Feasible &&
+                params.opt) {
+                solve_status.error = true;
+                solve_status.ObjVal = model.get(GRB_DoubleAttr_ObjVal);
+                solve_status.ObjBound = model.get(GRB_DoubleAttr_ObjBound);
+                solve_status.msg =
+                    "Naive retained a non-optimal integer incumbent at " +
+                    string(gurobi_status_name(solve_status.native_status));
+            } else if (solve_status.status == GurobiSolveStatus::Feasible) {
+                solve_status.msg = "Naive accepted a feasible incumbent at " +
+                    string(gurobi_status_name(solve_status.native_status));
+            } 
+        } else {
+            report_gurobi_failure(solve_status, model, "Naive");
         }
     } catch (GRBException e) {
         cout << "Error code = " << e.getErrorCode() << endl;
         cout << e.getMessage() << endl;
 
-        err_info.error = true;
-        err_info.ObjVal = B;
-        err_info.ObjBound = 0;
-        if (e.getErrorCode() == GRB_ERROR_OUT_OF_MEMORY) {
-            err_info.msg = "out of memory";
-        } else {
-            err_info.msg = "unknown error";
-        }
+        report_gurobi_exception(solve_status, "Naive", e.getMessage());
     } catch (...) {
         cout << "Exception during optimization" << endl;
-        err_info.error = true;
-        err_info.ObjVal = g.order();
-        err_info.ObjBound = 0;
+        report_gurobi_exception(solve_status, "Naive", "unknown exception during optimization");
     }
+
+    return std::nullopt;
 }
 
-void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams params, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info) {
+void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams params, std::vector<int> &burning_sequence, GurobiStatus &err_info) {
     PRECONDITION(r >= 1);
     PRECONDITION(g.order() >= r);
 

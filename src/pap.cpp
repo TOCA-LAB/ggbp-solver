@@ -2,14 +2,16 @@
 #include <vector>
 #include <iostream>
 #include "ggbp/graph.hpp"
+#include "ggbp/gurobi_status.hpp"
 
+#include "ggbp/gurobi_status.hpp"
 #include "ggbp/ggbp.hpp"
 
 namespace ggbp::ilp::pap {
 using std::vector;
 using std::cout, std::endl;
 
-void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiErrorInfo &err_info) {
+void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiStatus &err_info) {
     int const n_vertices = graph.order();
 
     try {        

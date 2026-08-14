@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
     }
     
     vector<int> seed_set;
-    ggbp::ilp::GurobiErrorInfo err_info;
+    ggbp::ilp::GurobiStatus err_info;
 
     ggbp::ilp::pap::solve_ilp(graph, r, seed_set, params, err_info);
 

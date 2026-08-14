@@ -11,7 +11,7 @@
 namespace ggbp::heuristics {
 using std::vector, std::forward_list;
 
-void min_dominating_set(Graph const &graph, vector<int> &dominating_set, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiErrorInfo &err_info) {
+void min_dominating_set(Graph const &graph, vector<int> &dominating_set, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiStatus &err_info) {
     try {
         int n_vertices = graph.order();
 
@@ -93,7 +93,7 @@ void min_dominating_set(Graph const &graph, vector<int> &dominating_set, ggbp::i
     }
 }
 
-vector<Vertex> dominating(Graph const &graph, int r, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiErrorInfo &err_info) {
+vector<Vertex> dominating(Graph const &graph, int r, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiStatus &err_info) {
     vector<int> dominating_set;
 
     min_dominating_set(graph, dominating_set, params, err_info);

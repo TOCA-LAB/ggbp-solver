@@ -4,6 +4,7 @@
 #include "gurobi_c++.h"
 #include "ggbp/graph.hpp"
 
+#include "ggbp/gurobi_status.hpp"
 #include "ggbp/ggbp.hpp"
 
 namespace ggbp::ilp::prym {
@@ -134,7 +135,7 @@ class callback_prym: public GRBCallback {
         }
 };
 
-void solve_prym(Graph &graph, int B, vector<int> &temp_burning_sequence, vector<int> initial_covered_vertices, GurobiParams params, GurobiErrorInfo &err_info) {
+void solve_prym(Graph &graph, int B, vector<int> &temp_burning_sequence, vector<int> initial_covered_vertices, GurobiParams params, GurobiStatus &err_info) {
     try {
         GRBEnv env(true);
         env.set(GRB_IntParam_OutputFlag, params.verbose);
@@ -237,7 +238,7 @@ void solve_prym(Graph &graph, int B, vector<int> &temp_burning_sequence, vector<
 }
 
 
-void run_prym(Graph &graph, vector<int> &burning_sequence, GurobiParams params, GurobiErrorInfo &err_info) {
+void run_prym(Graph &graph, vector<int> &burning_sequence, GurobiParams params, GurobiStatus &err_info) {
     int LB, UB, B;
     vector<int> temp_burning_sequence, initial_covered_vertices;
 

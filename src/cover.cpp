@@ -45,7 +45,7 @@ vector<int> generate_covering_tree(Graph const &g, int const r, vector<Vertex> s
     return depth;
 }
 
-void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info) {
+void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiStatus &err_info) {
     int num_vertices = g.order();
     vector<int> vertices = g.vertices();
 
@@ -201,7 +201,7 @@ void solve_ilp(Graph const &g, int const r, int const B, vector<int> &burning_se
     }
 }
 
-void find_burning_sequence(Graph const &g, int const r, int &LB, int &UB, vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info) {
+void find_burning_sequence(Graph const &g, int const r, int &LB, int &UB, vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiStatus &err_info) {
     PRECONDITION(r >= 1);
     PRECONDITION(g.order() >= r);
 

@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
     
     std::string graph_name = fs::path(graph_file_path).stem().string();
 
-    ggbp::ilp::GurobiErrorInfo err_info;
+    ggbp::ilp::GurobiStatus err_info;
     auto burning_sequence = ggbp::heuristics::dominating(graph, r, params, err_info);
 
     auto t2 = high_resolution_clock::now();

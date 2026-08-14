@@ -7,6 +7,7 @@
 #include <argparse/argparse.hpp>
 #include <nlohmann/json.hpp>
 #include "ggbp/graph.hpp"
+#include "ggbp/gurobi_status.hpp"
 #include "ggbp/ggbp.hpp"
 
 using std::vector;
@@ -112,6 +113,7 @@ int main(int argc, char* argv[]) {
         graph = Graph(g6_string);
     } else {
         cout << "Invalid graph format" << endl;
+        return 1;
     }
 
     std::string graph_name = fs::path(graph_file_path).stem().string();
@@ -121,7 +123,7 @@ int main(int argc, char* argv[]) {
     }
     
     vector<int> burning_sequence;
-    ggbp::ilp::GurobiErrorInfo err_info;
+    ggbp::ilp::GurobiStatus err_info;
     
     int UB, LB;
     if (program.is_used("-lb")) {
@@ -187,7 +189,16 @@ int main(int argc, char* argv[]) {
         j["execution_time"] = ms_double.count()/1000;
         j["upper_bound"] = UB;
         j["lower_bound"] = LB;
-        j["algorithm"] = "naive";
+
+        std::string alg = "dec";
+
+        if (params.opt) {
+            if (params.linear_relax)
+                alg = "relax";
+            else
+                alg = "opt";
+        }
+        j["algorithm"] = "naive-" + alg;
 
         j["completed"] = !err_info.error;
 

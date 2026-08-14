@@ -5,8 +5,10 @@
 #include <tuple>
 #include <string>
 #include <random>
+#include <optional>
 
 #include "ggbp/graph.hpp"
+#include "ggbp/gurobi_status.hpp"
 
 
 namespace ggbp::brkga {
@@ -70,13 +72,6 @@ namespace ggbp::ilp {
 
         GurobiParams() = default;
     };
-
-    struct GurobiErrorInfo {
-        bool error = false;
-        double ObjVal;
-        double ObjBound;
-        std::string msg;
-    };
         
     int get_upper_bound(Graph const &g, int const r, bool const verbose, unsigned const seed = 0);
 
@@ -92,29 +87,29 @@ namespace ggbp::ilp {
             LPParams() = default;
         };
         
-        void solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info);
+        std::optional<double> solve_ilp(Graph &g, int const r, int const B, LPParams params, std::vector<int> &burning_sequence, GurobiStatus &err_info);
 
-        void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams params, std::vector<int> &burning_sequence, GurobiErrorInfo &err_info);    
+        void find_burning_sequence(Graph &g, int const r, int &LB, int &UB, LPParams params, std::vector<int> &burning_sequence, GurobiStatus &err_info);    
     }
     
     namespace cover {    
         std::vector<int> generate_covering_tree(Graph const &g, int const r, std::vector<int> sources);
 
-        void solve_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info);
+        void solve_ilp(Graph const &g, int const r, int const B, std::vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiStatus &err_info);
 
-        void find_burning_sequence(Graph const &g, int const r, int &LB, int &UB, std::vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiErrorInfo &err_info);
+        void find_burning_sequence(Graph const &g, int const r, int &LB, int &UB, std::vector<int> &burning_sequence, ggbp::ilp::GurobiParams params, GurobiStatus &err_info);
     }
     
     namespace prym {
         void run_bff_d(Graph &graph, std::vector<int> &burning_sequence);
 
-        void solve_prym(Graph &graph, int B, std::vector<int> &temp_burning_sequence, std::vector<int> initial_covered_vertices, GurobiParams params, GurobiErrorInfo &err_info);
+        void solve_prym(Graph &graph, int B, std::vector<int> &temp_burning_sequence, std::vector<int> initial_covered_vertices, GurobiParams params, GurobiStatus &err_info);
 
-        void run_prym(Graph &graph, std::vector<int> &burning_sequence, GurobiParams params, GurobiErrorInfo &err_info);
+        void run_prym(Graph &graph, std::vector<int> &burning_sequence, GurobiParams params, GurobiStatus &err_info);
     }
 
     namespace pap {
-        void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, GurobiParams params, GurobiErrorInfo &err_info);
+        void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, GurobiParams params, GurobiStatus &err_info);
     }
 }
 
@@ -123,7 +118,7 @@ namespace ggbp::heuristics {
 
     std::vector<Vertex> unburned_neighbors(Graph const &graph, int const r);
 
-    std::vector<Vertex> dominating(Graph const &graph, int r, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiErrorInfo &err_info);
+    std::vector<Vertex> dominating(Graph const &graph, int r, ggbp::ilp::GurobiParams params, ggbp::ilp::GurobiStatus &err_info);
 }
 
 #endif

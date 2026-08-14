@@ -6,6 +6,7 @@
 
 #include <argparse/argparse.hpp>
 #include <nlohmann/json.hpp>
+#include "ggbp/gurobi_status.hpp"
 #include "ggbp/ggbp.hpp"
 #include "ggbp/graph.hpp"
 #include "utils/combinations.hpp"
@@ -112,7 +113,7 @@ int main(int argc, char *argv[]) {
     }
 
     vector<Vertex> burning_sequence;
-    ggbp::ilp::GurobiErrorInfo err_info;
+    ggbp::ilp::GurobiStatus err_info;
     
     ggbp::ilp::cover::find_burning_sequence(graph, r, LB, UB, burning_sequence, params, err_info);
 
