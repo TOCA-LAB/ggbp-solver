@@ -158,6 +158,7 @@ int main(int argc, char* argv[]) {
         j["instance"] = graph_name;
         j["order"] = graph.order();
         j["size"] = graph.size();
+        j["r"] = r;
         j["burning_number"] = burning_sequence.size();
         j["burning_sequence"] = burning_sequence;
         j["execution_time"] = ms_double.count()/1000;

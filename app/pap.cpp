@@ -127,6 +127,7 @@ int main(int argc, char* argv[]) {
         j["instance"] = graph_name;
         j["order"] = graph.order();
         j["size"] = graph.size();
+        j["r"] = r;
         j["seed_size"] = seed_set.size();
         j["seed_set"] = seed_set;
         j["execution_time"] = ms_double.count()/1000;
