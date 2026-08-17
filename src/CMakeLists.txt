@@ -1,6 +1,7 @@
 set(GGBP_SOURCES
     graph.cpp
     ggbp_utils.cpp
+    burning_simulation.cpp
     gurobi_status.cpp
     cover.cpp
     naive.cpp
