@@ -1,71 +1,57 @@
+#include <optional>
+#include <stdexcept>
 #include <vector>
-#include <forward_list>
+
+#include "ggbp/burning_simulation.hpp"
+#include "ggbp/ggbp.hpp"
 #include "ggbp/graph.hpp"
 
-#include "ggbp/ggbp.hpp"
+using std::vector;
+using ggbp::simulation::BurningState;
 
-#include <iostream>
+std::optional<Vertex> best_unscheduled_source(const Graph& graph, const BurningState& state) {
+    std::optional<Vertex> best_source;
+    Graph::size_type best_unburned_neighbors = 0;
 
-using std::vector, std::forward_list;
+    for (Vertex u = 0; u < graph.order(); u++) {
+        if (state.is_burned(u) || state.is_in_frontier(u))
+            continue;
+
+        const auto unburned_neighbors = graph.degree(u) - state.burned_neighbor_count(u);
+
+        if (!best_source || unburned_neighbors >= best_unburned_neighbors) {
+            best_source = u;
+            best_unburned_neighbors = unburned_neighbors;
+        }
+    }
+
+    return best_source;
+}
+
+Vertex choose_source(const Graph& graph, const BurningState& state) {
+    if (const auto best = best_unscheduled_source(graph, state)) {
+        return *best;
+    }
+
+    for (const auto u : state.frontier()) {
+        if (!state.is_burned(u)) {
+            return u;
+        }
+    }
+
+    throw std::logic_error("unburned vertex exists but no source can be selected");
+}
 
 vector<Vertex> ggbp::heuristics::unburned_neighbors(Graph const &graph, int const r) {
-    int n_vertices = graph.order();
+    BurningState state(graph, r);
     
-    int n_burning = 0;
-    vector<int> burning(n_vertices, 0);
+    vector<Vertex> burning_sequence;
+    burning_sequence.reserve(graph.order());
 
-    vector<unsigned> num_burning_neighbors(n_vertices);
-
-    vector<int> burning_sequence;
-
-    forward_list<int> to_burn;
-
-    while (n_burning < n_vertices) {
-        forward_list<int> next_to_burn;
-        vector<int> in_to_burn(n_vertices, 0);
-
-        for (auto v : to_burn) {
-            burning[v] = 1;
-            n_burning++;
-        }
-        
-        for (auto v : to_burn) {
-            for (auto u : graph.neighbors(v)) {
-                num_burning_neighbors[u]++;    
-
-                if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
-                    next_to_burn.push_front(u);
-                    in_to_burn[u] = 1;
-                }
-            }
-        }
-
-        int max_vertex = 0;
-        unsigned max_neighbors = 0;
-
-        for (int u = 0; u < n_vertices; u++) {
-            if ((graph.degree(u) - num_burning_neighbors[u]) >= max_neighbors && !burning[u] && !in_to_burn[u]) {
-                max_vertex = u;
-                max_neighbors = graph.degree(u) - num_burning_neighbors[u];
-            }
-        }
-        
-        burning_sequence.push_back(max_vertex);
-        burning[max_vertex] = 1;
-        n_burning++;
-        
-    
-        for (auto u : graph.neighbors(max_vertex)) {
-            num_burning_neighbors[u]++;
-            
-            if (num_burning_neighbors[u] >= r && !burning[u] && !in_to_burn[u]) {
-                next_to_burn.push_front(u);
-                in_to_burn[u] = 1;
-            }
-        }
-        
-        to_burn = next_to_burn;
-        next_to_burn.clear();
+    while (!state.complete()) {
+        const auto source = choose_source(graph, state);
+        burning_sequence.push_back(source);
+        state.burn(source);
     }
 
     return burning_sequence;

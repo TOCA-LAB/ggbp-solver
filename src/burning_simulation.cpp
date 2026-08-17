@@ -188,5 +188,4 @@ BurningResult simulate_burning(
     return state.result();
 }
 
-
 }
