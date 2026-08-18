@@ -228,6 +228,8 @@ void run_prym(Graph &graph, vector<int> &burning_sequence, GurobiParams params, 
     burning_sequence = temp_burning_sequence;
     initial_covered_vertices = temp_burning_sequence;
 
+    solve_status = {};
+
     UB = int(temp_burning_sequence.size());
     LB = (UB + 4) / 3;
 
@@ -242,6 +244,8 @@ void run_prym(Graph &graph, vector<int> &burning_sequence, GurobiParams params, 
             cout << "Current upper bound = " << UB << endl;
             cout << "Trying to find a burning sequence of length " << B << "." << endl << endl;
         }
+
+        params.time_limit -= solve_status.runtime_seconds;
 
         solve_prym(graph, B, temp_burning_sequence, initial_covered_vertices, params, solve_status);
 
