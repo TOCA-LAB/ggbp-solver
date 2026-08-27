@@ -156,13 +156,29 @@ std::optional<double> solve_ilp(Graph &g, int const r, int const B, LPParams par
                 // 2. Persistência: uma vez queimado, sempre queimado
                 model.addConstr(x[u][t] >= x[u][t-1], "stay_" + to_string(u) + "_" + to_string(t));
             
+                expr = 0;
+                for (int t = 1; t <= B; t++) {
+                    expr += w[u][t];
+                }
+                model.addConstr(expr <= 1);
+
+                for (int t = 1; t <= B; t++) {
+                    expr += y[u][t];
+                }
+                model.addConstr(expr <= 1);
+
                 //  3. Lógica de Difusão (Threshold r)
                 if (g.degree(u) >= r) {
                     // w[v,t] só pode ser 1 se r vizinhos estavam queimados em t-1
                     expr = 0;
                     for (int v : g.neighbors(u))
                         expr += x[v][t-1];
-                    model.addConstr(r * w[u][t] <= expr, "diff_" + to_string(u) + "_" + to_string(t));
+
+                    GRBLinExpr expr_w = 0;
+                    for (int ti = 1; ti <= t; ti++)
+                        expr_w += w[u][ti];
+
+                    model.addConstr(r * expr_w <= expr, "diff_" + to_string(u) + "_" + to_string(t));
                 } else {
                     model.addConstr(w[u][t] == 0);
                 }
@@ -220,7 +236,7 @@ std::optional<double> solve_ilp(Graph &g, int const r, int const B, LPParams par
             }
             model.setObjective(obj + 1, GRB_MINIMIZE);
         }
-
+        model.write("model.mps");
 
         model.optimize();
 
@@ -228,7 +244,16 @@ std::optional<double> solve_ilp(Graph &g, int const r, int const B, LPParams par
 
         if (solve_status.status == GurobiSolveStatus::Optimal || 
             solve_status.status == GurobiSolveStatus::Feasible) {
-            
+
+            GRBVar* vars = model.getVars();
+            for (int i = 0; i < model.get(GRB_IntAttr_NumVars); i++) {
+                if (vars[i].get(GRB_DoubleAttr_X) != 0) {
+                    cout << vars[i].get(GRB_StringAttr_VarName) << " = " << vars[i].get(GRB_DoubleAttr_X) << endl;
+                }
+            }
+            cout << model.get(GRB_DoubleAttr_ObjVal) << endl;
+            delete[] vars;
+
             if (params.linear_relax) {
                 if (solve_status.status == GurobiSolveStatus::Optimal)
                     return model.get(GRB_DoubleAttr_ObjVal);
