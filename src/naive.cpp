@@ -238,6 +238,8 @@ std::optional<double> solve_ilp(Graph &g, int const r, int const B, LPParams par
         }
         model.write("model.mps");
 
+        model.set(GRB_IntParam_MIPFocus, 2);
+        
         model.optimize();
 
         solve_status = inspect_gurobi_model(model);
