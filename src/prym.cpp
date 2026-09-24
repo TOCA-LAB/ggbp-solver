@@ -205,16 +205,16 @@ void solve_prym(Graph &graph, int B, vector<int> &burning_sequence, vector<int> 
                 }
             }
         } else {
-            report_gurobi_failure(solve_status, model, "Naive");
+            report_gurobi_failure(solve_status, model, "PRYM");
         }
     } catch (GRBException e) {
         cout << "Error code = " << e.getErrorCode() << endl;
         cout << e.getMessage() << endl;
 
-        report_gurobi_exception(solve_status, "Naive", e.getMessage());
+        report_gurobi_exception(solve_status, "PRYM", e.getMessage());
     } catch (...) {
         cout << "Exception during optimization" << endl;
-        report_gurobi_exception(solve_status, "Naive", "unknown exception during optimization");
+        report_gurobi_exception(solve_status, "PRYM", "unknown exception during optimization");
     }
 }
 

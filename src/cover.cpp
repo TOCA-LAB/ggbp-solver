@@ -167,16 +167,16 @@ void solve_ilp(Graph const &g, int const r, int const B, ggbp::ilp::GurobiParams
                 }
             }
         } else {
-            report_gurobi_failure(solve_status, model, "Naive");
+            report_gurobi_failure(solve_status, model, "Cover");
         }
     } catch (GRBException e) {
         cout << "Error code = " << e.getErrorCode() << endl;
         cout << e.getMessage() << endl;
 
-        report_gurobi_exception(solve_status, "Naive", e.getMessage());
+        report_gurobi_exception(solve_status, "Cover", e.getMessage());
     } catch (...) {
         cout << "Exception during optimization" << endl;
-        report_gurobi_exception(solve_status, "Naive", "unknown exception during optimization");
+        report_gurobi_exception(solve_status, "Cover", "unknown exception during optimization");
     }
 }
 

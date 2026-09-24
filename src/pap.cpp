@@ -41,21 +41,33 @@ void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp:
         }
 
         // --- Restrições ---
-        // 1. Para u ser disseminador no turno t, ou está no conjunto semente,
-        // ou tem r vizinhos disseminadores no turno t-1
+
         for (int u = 0; u < n_vertices; u++) {
             for (int t = 1; t < n_vertices + 1; t++) {
-                GRBLinExpr expr = 0;
+                // 1. Um vértice disseminador continua sendo disseminador
+                model.addConstr(s[u][t] - s[u][t-1] >= 0, "ContinueSpreading_" + std::to_string(u) + "_" + std::to_string(t));
                 
+                // 2. Para u ser disseminador no turno t, ou está no conjunto semente,
+                // ou tem r vizinhos disseminadores no turno t-1
+                GRBLinExpr expr = 0;
                 for (auto v : graph.neighbors(u)) {
                     expr += s[v][t-1];
                 }
 
-                model.addConstr(expr - r * (s[u][t] - s[u][0]) >= 0, "Spreader_" + std::to_string(u) + "_" + std::to_string(t));
+                model.addConstr(expr - r * (s[u][t] - s[u][0]) >= 0, "NoSpread_" + std::to_string(u) + "_" + std::to_string(t));
+                
+                // 3. Se u tem vizinhos disseminadores o suficiente no turno anterior,
+                // u também se tornará disseminador no turno atual 
+                expr = 0;
+                for (auto v : graph.neighbors(u)) {
+                    expr += s[v][t-1];
+                }
+
+                model.addConstr(expr - (graph.degree(u) - r + 1) * s[u][t] <= r - 1, "Spread_" + std::to_string(u) + "_" + std::to_string(t));
             }
         }
 
-        // 2. Ao final, todo vértice deve ser conhecedor
+        // 4. Ao final, todo vértice deve ser conhecedor
         for (int u = 0; u < n_vertices; u++) {
             GRBLinExpr expr = 0;
             for (auto v : graph.neighbors(u)) {
@@ -65,7 +77,7 @@ void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp:
             model.addConstr(s[u][0] + expr >= 1, "Aware_" + std::to_string(u));
         }
 
-        // 3. Restrição adicional
+        // 5. Restrição adicional
         for (int u = 0; u < n_vertices; u++) {
             for (int t = 1; t < n_vertices + 1; t++) {
                 GRBLinExpr expr = 0;
@@ -77,7 +89,7 @@ void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp:
                 for (int v = 0; v < n_vertices; v++) {
                     expr += s[v][t] - s[v][t-1];
                 }
-                model.addConstr(s[u][t] + expr >= 1, "Adicional_" + std::to_string(u) + "_" + std::to_string(t));
+                model.addConstr(s[u][t] + expr >= 1, "Aditional_" + std::to_string(u) + "_" + std::to_string(t));
             }
         }
 
@@ -102,16 +114,16 @@ void solve_ilp(Graph &graph, const int r, std::vector<int> &seed_set, ggbp::ilp:
                 }
             }
         } else {
-            report_gurobi_failure(solve_status, model, "Naive");
+            report_gurobi_failure(solve_status, model, "PAP");
         }
     } catch (GRBException e) {
         cout << "Error code = " << e.getErrorCode() << endl;
         cout << e.getMessage() << endl;
 
-        report_gurobi_exception(solve_status, "Naive", e.getMessage());
+        report_gurobi_exception(solve_status, "PAP", e.getMessage());
     } catch (...) {
         cout << "Exception during optimization" << endl;
-        report_gurobi_exception(solve_status, "Naive", "unknown exception during optimization");
+        report_gurobi_exception(solve_status, "PAP", "unknown exception during optimization");
     }
 }
 
