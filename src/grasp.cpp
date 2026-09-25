@@ -203,7 +203,7 @@ void local_search(vector<int>& burning_sequence, Graph const &graph, int r) {
             if (vertex_queue.size() < k) {
                 vertex_queue.push_back(u);
                 push_heap(vertex_queue.begin(), vertex_queue.end());
-            } else {
+            } else if (graph.degree(u) > graph.degree(vertex_queue[0])) {
                 pop_heap(vertex_queue.begin(), vertex_queue.end());
                 vertex_queue.pop_back();
 
