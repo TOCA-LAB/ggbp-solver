@@ -205,15 +205,24 @@ int main(int argc, char* argv[]) {
         j["upper_bound"] = UB;
         j["lower_bound"] = LB;
 
-        std::string alg = "dec";
+        std::string alg = "-dec";
 
         if (params.opt) {
             if (params.linear_relax)
-                alg = "relax";
+                alg = "-relax";
             else
-                alg = "opt";
+                alg = "-opt";
         }
-        j["algorithm"] = "naive-" + alg;
+        
+
+        if (params.radius_cut && params.active_neighborhood)
+            alg += "-all";
+        else if (params.radius_cut)
+            alg += "-rc";
+        else if (params.active_neighborhood)
+            alg += "-ac";
+
+        j["algorithm"] = "naive" + alg;
 
         j["completed"] = !solve_status.error;
 
