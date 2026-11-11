@@ -331,4 +331,11 @@ When using this software in research, identify the repository and the exact comm
 
 ## License
 
-A project-level license has not yet been specified; the repository's `LICENSE` file is currently empty. Third-party components, including Gurobi and bundled library code, have their own licensing terms.
+This project is licensed under the **GNU Lesser General Public License v3.0 or later** (LGPL-3.0-or-later). See [`LICENSE`](LICENSE) for the full license texts.
+
+Copyright (C) 2026 Lucas Guido, Maycon Sambinelli / Universidade Federal do ABC
+
+### Third-party components
+
+- **Gurobi** is proprietary software and is **not** included in this repository or covered by this license. To run the ILP components you need your own Gurobi license (free academic licenses are available from Gurobi).
+- Any bundled third-party library code remains under its own license.
