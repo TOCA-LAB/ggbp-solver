@@ -319,7 +319,7 @@ To reproduce a published experiment, use the solver revision and environment spe
 
 ## Research background and attribution
 
-This repository was developed in the undergraduate research project *Queimando Grafos* at the Federal University of ABC (UFABC), by [Lucas Guido](https://github.com/lucas-gcp) under the supervision of [Maycon Sambinelli](http://professor.ufabc.edu.br/~m.sambinelli/), with support from FAPESP, [process **2025/04352-6**](https://bv.fapesp.br/pt/bolsas/232745/queimando-grafos/).
+This repository was developed in the undergraduate research project *Queimando Grafos* at the Federal University of ABC (UFABC), by [Lucas Guido](https://github.com/lucas-gcp) under the supervision of [Maycon Sambinelli, Ph.D.](http://professor.ufabc.edu.br/~m.sambinelli/), with support from FAPESP, [process **2025/04352-6**](https://bv.fapesp.br/pt/bolsas/232745/queimando-grafos/).
 
 Relevant references include:
 
