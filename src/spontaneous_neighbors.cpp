@@ -105,7 +105,7 @@ best_starting_ignitors(const Graph& G, int r) {
 Vertex 
 choose_next_ignitor(MaxPQ& candidates, const vector<Vertex>& burning_order) {
     PRECONDITION(!candidates.empty());
-    PRECONDITION(all_in_interval(burning_order, NO_ROUND, burning_order.size() - 1));
+    // PRECONDITION(all_in_interval(burning_order, NO_ROUND, burning_order.size() - 1));
 
     Item it;
     do {

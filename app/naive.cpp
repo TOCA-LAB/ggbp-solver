@@ -200,7 +200,7 @@ int main(int argc, char* argv[]) {
         j["execution_time"] = ms_double.count()/1000;
         
         if (params.linear_relax)
-            j["linear_relaxation"] = lr.value_or(UB);
+            j["linear_relaxation"] = lr.value_or(LB);
         
         j["upper_bound"] = UB;
         j["lower_bound"] = LB;
