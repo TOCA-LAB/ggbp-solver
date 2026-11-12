@@ -312,7 +312,7 @@ FindGUROBI.cmake         Gurobi discovery for CMake
 ## Related research artifacts
 
 - [ggbp-benchmark](https://github.com/TOCA-LAB/ggbp-benchmark): benchmark instances and their source metadata.
-- [ggbp-experiments](https://github.com/TOCA-LAB/ggbp-experiments): experiment and analysis recipes.
+- [ggbp-experiments](https://github.com/TOCA-LAB/ggbp-experiments): recipes for the computational experiments.
 - [ggbp-analisis](https://github.com/TOCA-LAB/ggbp-analisis): processing of raw results, tables, and figures.
 
 To reproduce a published experiment, use the solver revision and environment specified by its recipe rather than assuming the current branch reproduces historical results.
